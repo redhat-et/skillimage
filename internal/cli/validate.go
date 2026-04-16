@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/skillcard"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 	"github.com/spf13/cobra"
 )
 

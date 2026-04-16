@@ -1,4 +1,4 @@
-module github.com/redhat-et/oci-skill-registry
+module github.com/redhat-et/skillimage
 
 go 1.26.2
 

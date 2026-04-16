@@ -8,7 +8,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
 // Inspect retrieves detailed metadata for a skill image stored in the local OCI layout.

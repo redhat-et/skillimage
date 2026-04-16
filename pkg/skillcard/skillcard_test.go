@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/skillcard"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
-const validSkillYAML = `apiVersion: skills.redhat.io/v1alpha1
+const validSkillYAML = `apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: hello-world
@@ -32,8 +32,8 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sc.APIVersion != "skills.redhat.io/v1alpha1" {
-		t.Errorf("apiVersion = %q, want %q", sc.APIVersion, "skills.redhat.io/v1alpha1")
+	if sc.APIVersion != "skillimage.io/v1alpha1" {
+		t.Errorf("apiVersion = %q, want %q", sc.APIVersion, "skillimage.io/v1alpha1")
 	}
 	if sc.Kind != "SkillCard" {
 		t.Errorf("kind = %q, want %q", sc.Kind, "SkillCard")
@@ -101,7 +101,7 @@ func TestValidateValid(t *testing.T) {
 }
 
 func TestValidateMissingRequiredFields(t *testing.T) {
-	yaml := `apiVersion: skills.redhat.io/v1alpha1
+	yaml := `apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: test
@@ -147,7 +147,7 @@ func TestValidateInvalidName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			yaml := fmt.Sprintf(`apiVersion: skills.redhat.io/v1alpha1
+			yaml := fmt.Sprintf(`apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: %s
@@ -170,7 +170,7 @@ metadata:
 }
 
 func TestValidateInvalidSemver(t *testing.T) {
-	yaml := `apiVersion: skills.redhat.io/v1alpha1
+	yaml := `apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: test

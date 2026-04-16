@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
 var stateRank = map[lifecycle.State]int{

@@ -12,7 +12,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/errdef"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
 // promotableStore is the minimal interface required for promoting a skill

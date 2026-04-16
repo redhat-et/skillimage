@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/redhat-et/oci-skill-registry/schemas"
+	"github.com/redhat-et/skillimage/schemas"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 )

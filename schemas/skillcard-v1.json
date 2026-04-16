@@ -9,7 +9,7 @@
   "properties": {
     "apiVersion": {
       "type": "string",
-      "const": "skills.redhat.io/v1alpha1"
+      "const": "skillimage.io/v1alpha1"
     },
     "kind": {
       "type": "string",

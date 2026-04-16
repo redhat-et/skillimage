@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/oci"
 	"github.com/spf13/cobra"
 )
 

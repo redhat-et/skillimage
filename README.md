@@ -35,7 +35,7 @@ and a `SKILL.md` (prompt content). See `examples/hello-world/`
 for a working example.
 
 ```yaml
-apiVersion: skills.redhat.io/v1alpha1
+apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: hello-world

@@ -7,8 +7,8 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
-	"github.com/redhat-et/oci-skill-registry/pkg/skillcard"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
 // buildAnnotations maps SkillCard fields to standard OCI annotation keys

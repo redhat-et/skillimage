@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
-	"github.com/redhat-et/oci-skill-registry/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func newPromoteCmd() *cobra.Command {

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
-	"github.com/redhat-et/oci-skill-registry/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func writeTestSkill(t *testing.T, dir string) {
@@ -15,7 +15,7 @@ func writeTestSkill(t *testing.T, dir string) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	skillYAML := []byte(`apiVersion: skills.redhat.io/v1alpha1
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: test-skill

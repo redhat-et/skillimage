@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/redhat-et/oci-skill-registry/internal/cli"
+	"github.com/redhat-et/skillimage/internal/cli"
 )
 
 var version = "dev"

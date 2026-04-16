@@ -3,7 +3,7 @@ package lifecycle_test
 import (
 	"testing"
 
-	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
 func TestValidTransition(t *testing.T) {

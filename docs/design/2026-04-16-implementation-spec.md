@@ -61,9 +61,7 @@ ImageVolumes. See the design doc for the full rationale.
 
 ### apiVersion
 
-`skills.redhat.io/v1alpha1` — uses a Red Hat-controlled domain.
-May change to a community domain if the project grows beyond
-Red Hat.
+`skillimage.io/v1alpha1` — project-owned domain, vendor-neutral.
 
 ## SkillCard schema
 
@@ -73,7 +71,7 @@ Red Hat.
 
 | Field | Constraints |
 | ----- | ----------- |
-| `apiVersion` | Must be `skills.redhat.io/v1alpha1` |
+| `apiVersion` | Must be `skillimage.io/v1alpha1` |
 | `kind` | Must be `SkillCard` |
 | `metadata.name` | 1-64 chars, `[a-z0-9-]`, no leading/trailing/consecutive hyphens |
 | `metadata.namespace` | 1-128 chars, `[a-z0-9-/]`, each segment follows name rules |
