@@ -109,3 +109,78 @@ func TestPackMissingSkillYAML(t *testing.T) {
 		t.Fatal("expected error for missing skill.yaml")
 	}
 }
+
+func TestCopyToAndBack(t *testing.T) {
+	// Pack into source store
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	srcStoreDir := t.TempDir()
+	srcClient, err := oci.NewClient(srcStoreDir)
+	if err != nil {
+		t.Fatalf("NewClient (src): %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = srcClient.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	// Copy to destination store
+	dstStoreDir := t.TempDir()
+	dstClient, err := oci.NewClient(dstStoreDir)
+	if err != nil {
+		t.Fatalf("NewClient (dst): %v", err)
+	}
+
+	ref := "test/test-skill:1.0.0-draft"
+	err = srcClient.CopyTo(ctx, ref, dstClient)
+	if err != nil {
+		t.Fatalf("CopyTo: %v", err)
+	}
+
+	// Verify the image exists in destination
+	images, err := dstClient.ListLocal()
+	if err != nil {
+		t.Fatalf("ListLocal: %v", err)
+	}
+	if len(images) != 1 {
+		t.Fatalf("expected 1 image after copy, got %d", len(images))
+	}
+}
+
+func TestUnpack(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	// Unpack to output directory
+	outputDir := t.TempDir()
+	err = client.Unpack(ctx, "test/test-skill:1.0.0-draft", outputDir)
+	if err != nil {
+		t.Fatalf("Unpack: %v", err)
+	}
+
+	// Verify: auto-creates subdirectory named after skill
+	expectedFile := filepath.Join(outputDir, "test-skill", "skill.yaml")
+	if _, err := os.Stat(expectedFile); err != nil {
+		t.Errorf("expected %s to exist: %v", expectedFile, err)
+	}
+
+	promptFile := filepath.Join(outputDir, "test-skill", "SKILL.md")
+	if _, err := os.Stat(promptFile); err != nil {
+		t.Errorf("expected %s to exist: %v", promptFile, err)
+	}
+}

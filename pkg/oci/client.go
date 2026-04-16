@@ -29,6 +29,16 @@ type PackOptions struct {
 	Tag string
 }
 
+// PushOptions configures the Push operation.
+type PushOptions struct{}
+
+// PullOptions configures the Pull operation.
+type PullOptions struct {
+	// OutputDir, if set, causes the pulled image to be unpacked into this
+	// directory after storing it locally.
+	OutputDir string
+}
+
 // LocalImage holds metadata for an image stored in the local OCI layout.
 type LocalImage struct {
 	Name    string
