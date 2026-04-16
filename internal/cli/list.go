@@ -8,16 +8,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newImagesCmd() *cobra.Command {
+func newListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "images",
-		Short: "List skill images in local store",
-		Args:  cobra.NoArgs,
-		RunE:  runImages,
+		Use:     "list",
+		Aliases: []string{"ls"},
+		Short:   "List skill images in local store",
+		Args:    cobra.NoArgs,
+		RunE:    runList,
 	}
 }
 
-func runImages(cmd *cobra.Command, args []string) error {
+func runList(cmd *cobra.Command, args []string) error {
 	client, err := defaultClient()
 	if err != nil {
 		return err

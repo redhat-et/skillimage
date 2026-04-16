@@ -128,9 +128,11 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 }
 
 // ListLocal reads the store's tags and returns image metadata from manifest annotations.
+// Deduplicates by digest so that "latest" aliases don't produce duplicate rows.
 func (c *Client) ListLocal() ([]LocalImage, error) {
 	ctx := context.Background()
 	var images []LocalImage
+	seen := make(map[string]bool)
 
 	err := c.store.Tags(ctx, "", func(tags []string) error {
 		for _, tag := range tags {
@@ -139,47 +141,17 @@ func (c *Client) ListLocal() ([]LocalImage, error) {
 				continue
 			}
 
-			// Fetch and parse the manifest to get annotations.
-			rc, err := c.store.Fetch(ctx, desc)
+			digestStr := desc.Digest.String()
+			if seen[digestStr] {
+				continue
+			}
+			seen[digestStr] = true
+
+			img, err := c.imageFromManifest(ctx, tag, desc)
 			if err != nil {
 				continue
 			}
-			manifestBytes, err := io.ReadAll(rc)
-			rc.Close()
-			if err != nil {
-				continue
-			}
-
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-				continue
-			}
-
-			ann := manifest.Annotations
-			if ann == nil {
-				continue
-			}
-
-			// Extract name from vendor/title or the tag reference itself.
-			name := parseNameFromTag(tag)
-			version := ann[ocispec.AnnotationVersion]
-			status := ann[lifecycle.StatusAnnotation]
-			created := ann[ocispec.AnnotationCreated]
-
-			// Extract just the tag portion.
-			tagPart := ""
-			if idx := strings.LastIndex(tag, ":"); idx >= 0 {
-				tagPart = tag[idx+1:]
-			}
-
-			images = append(images, LocalImage{
-				Name:    name,
-				Version: version,
-				Tag:     tagPart,
-				Digest:  desc.Digest.String(),
-				Status:  status,
-				Created: created,
-			})
+			images = append(images, *img)
 		}
 		return nil
 	})
@@ -188,6 +160,44 @@ func (c *Client) ListLocal() ([]LocalImage, error) {
 	}
 
 	return images, nil
+}
+
+// imageFromManifest fetches a manifest and extracts LocalImage metadata.
+func (c *Client) imageFromManifest(ctx context.Context, tag string, desc ocispec.Descriptor) (*LocalImage, error) {
+	rc, err := c.store.Fetch(ctx, desc)
+	if err != nil {
+		return nil, err
+	}
+	manifestBytes, err := io.ReadAll(rc)
+	rc.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return nil, err
+	}
+
+	ann := manifest.Annotations
+	if ann == nil {
+		return nil, fmt.Errorf("no annotations")
+	}
+
+	name := parseNameFromTag(tag)
+	tagPart := ""
+	if idx := strings.LastIndex(tag, ":"); idx >= 0 {
+		tagPart = tag[idx+1:]
+	}
+
+	return &LocalImage{
+		Name:    name,
+		Version: ann[ocispec.AnnotationVersion],
+		Tag:     tagPart,
+		Digest:  desc.Digest.String(),
+		Status:  ann[lifecycle.StatusAnnotation],
+		Created: ann[ocispec.AnnotationCreated],
+	}, nil
 }
 
 // parseNameFromTag extracts the "namespace/name" portion from a tag reference
