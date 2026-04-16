@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/redhat-et/oci-skill-registry/pkg/oci"
 	"github.com/spf13/cobra"
@@ -31,7 +32,16 @@ Examples:
 	return cmd
 }
 
+func looksLocal(ref string) bool {
+	parts := strings.SplitN(ref, "/", 2)
+	return len(parts) < 2 || (!strings.Contains(parts[0], ".") && !strings.Contains(parts[0], ":"))
+}
+
 func runPull(cmd *cobra.Command, ref string, outputDir string) error {
+	if looksLocal(ref) {
+		return fmt.Errorf("%s looks like a local reference, not a remote registry\n\nTo install from the local store, use:\n  skillctl install %s --target <agent>\n  skillctl install %s -o <directory>", ref, ref, ref)
+	}
+
 	client, err := defaultClient()
 	if err != nil {
 		return err
