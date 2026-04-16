@@ -7,6 +7,7 @@ import (
 	"context"
 	_ "crypto/sha256" // Register SHA256 algorithm for go-digest.
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	godigest "github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/errdef"
 
 	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
 	"github.com/redhat-et/oci-skill-registry/pkg/skillcard"
@@ -64,7 +66,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		Digest:    layerDigest,
 		Size:      int64(len(layerBytes)),
 	}
-	if err := c.store.Push(ctx, layerDesc, bytes.NewReader(layerBytes)); err != nil {
+	if err := c.store.Push(ctx, layerDesc, bytes.NewReader(layerBytes)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
 		return ocispec.Descriptor{}, fmt.Errorf("pushing layer: %w", err)
 	}
 
@@ -79,7 +81,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		Digest:    configDigest,
 		Size:      int64(len(configBytes)),
 	}
-	if err := c.store.Push(ctx, configDesc, bytes.NewReader(configBytes)); err != nil {
+	if err := c.store.Push(ctx, configDesc, bytes.NewReader(configBytes)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
 		return ocispec.Descriptor{}, fmt.Errorf("pushing config: %w", err)
 	}
 
@@ -108,7 +110,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		Annotations: annotations,
 	}
 
-	if err := c.store.Push(ctx, manifestDesc, bytes.NewReader(manifestBytes)); err != nil {
+	if err := c.store.Push(ctx, manifestDesc, bytes.NewReader(manifestBytes)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
 		return ocispec.Descriptor{}, fmt.Errorf("pushing manifest: %w", err)
 	}
 
