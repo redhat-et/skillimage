@@ -2,6 +2,7 @@ package skillcard_test
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -82,5 +83,133 @@ func TestSerialize(t *testing.T) {
 	}
 	if roundtrip.Metadata.Version != sc.Metadata.Version {
 		t.Errorf("roundtrip version = %q, want %q", roundtrip.Metadata.Version, sc.Metadata.Version)
+	}
+}
+
+func TestValidateValid(t *testing.T) {
+	sc, err := skillcard.Parse(strings.NewReader(validSkillYAML))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	errs, err := skillcard.Validate(sc)
+	if err != nil {
+		t.Fatalf("validate error: %v", err)
+	}
+	if len(errs) != 0 {
+		t.Errorf("expected no validation errors, got %v", errs)
+	}
+}
+
+func TestValidateMissingRequiredFields(t *testing.T) {
+	yaml := `apiVersion: skills.redhat.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: test
+`
+	sc, err := skillcard.Parse(strings.NewReader(yaml))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	errs, err := skillcard.Validate(sc)
+	if err != nil {
+		t.Fatalf("validate error: %v", err)
+	}
+	if len(errs) == 0 {
+		t.Fatal("expected validation errors for missing required fields")
+	}
+	for _, required := range []string{"namespace", "version", "description"} {
+		found := false
+		for _, e := range errs {
+			if strings.Contains(e.Field, required) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected error for missing %q, got errors: %v", required, errs)
+		}
+	}
+}
+
+func TestValidateInvalidName(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid", "hello-world", false},
+		{"valid single char", "a", false},
+		{"uppercase", "Hello", true},
+		{"spaces", "hello world", true},
+		{"leading hyphen", "-hello", true},
+		{"trailing hyphen", "hello-", true},
+		{"consecutive hyphens", "hello--world", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := fmt.Sprintf(`apiVersion: skills.redhat.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: %s
+  namespace: test
+  version: 1.0.0
+  description: test
+`, tt.value)
+			sc, err := skillcard.Parse(strings.NewReader(yaml))
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			errs, _ := skillcard.Validate(sc)
+			hasErr := len(errs) > 0
+			if hasErr != tt.wantErr {
+				t.Errorf("name=%q: hasErr=%v, wantErr=%v, errs=%v",
+					tt.value, hasErr, tt.wantErr, errs)
+			}
+		})
+	}
+}
+
+func TestValidateInvalidSemver(t *testing.T) {
+	yaml := `apiVersion: skills.redhat.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: test
+  namespace: test
+  version: not-semver
+  description: test
+`
+	sc, err := skillcard.Parse(strings.NewReader(yaml))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	errs, _ := skillcard.Validate(sc)
+	found := false
+	for _, e := range errs {
+		if strings.Contains(e.Field, "version") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected semver validation error, got: %v", errs)
+	}
+}
+
+func TestValidateWrongAPIVersion(t *testing.T) {
+	yaml := `apiVersion: wrong/v1
+kind: SkillCard
+metadata:
+  name: test
+  namespace: test
+  version: 1.0.0
+  description: test
+`
+	sc, err := skillcard.Parse(strings.NewReader(yaml))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	errs, _ := skillcard.Validate(sc)
+	if len(errs) == 0 {
+		t.Fatal("expected error for wrong apiVersion")
 	}
 }
