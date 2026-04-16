@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	_ "crypto/sha256" // Register SHA256 algorithm for go-digest.
 	"encoding/json"
 	"fmt"
 	"io"

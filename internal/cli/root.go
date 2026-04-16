@@ -21,6 +21,8 @@ func NewRootCmd(version string) *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&flagVerbose, "verbose", "v", false, "verbose output")
 
 	cmd.AddCommand(newValidateCmd())
+	cmd.AddCommand(newPackCmd())
+	cmd.AddCommand(newImagesCmd())
 
 	return cmd
 }
