@@ -49,6 +49,9 @@ type LocalImage struct {
 	Created string
 }
 
+// PromoteOptions configures the Promote operation.
+type PromoteOptions struct{}
+
 // InspectResult holds detailed metadata for a skill image.
 type InspectResult struct {
 	Name        string

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/redhat-et/oci-skill-registry/pkg/lifecycle"
 	"github.com/redhat-et/oci-skill-registry/pkg/oci"
 )
 
@@ -216,5 +217,84 @@ func TestInspect(t *testing.T) {
 	}
 	if result.LayerCount != 1 {
 		t.Errorf("layer count = %d, want 1", result.LayerCount)
+	}
+}
+
+func TestPromoteLocal(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	// Promote draft -> testing
+	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-draft", lifecycle.Testing)
+	if err != nil {
+		t.Fatalf("Promote to testing: %v", err)
+	}
+
+	// Verify new tag exists with correct status
+	result, err := client.Inspect(ctx, "test/test-skill:1.0.0-rc")
+	if err != nil {
+		t.Fatalf("Inspect after promote to testing: %v", err)
+	}
+	if result.Status != "testing" {
+		t.Errorf("status = %q, want %q", result.Status, "testing")
+	}
+
+	// Promote testing -> published
+	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-rc", lifecycle.Published)
+	if err != nil {
+		t.Fatalf("Promote to published: %v", err)
+	}
+
+	// Verify published tag
+	result, err = client.Inspect(ctx, "test/test-skill:1.0.0")
+	if err != nil {
+		t.Fatalf("Inspect after publish: %v", err)
+	}
+	if result.Status != "published" {
+		t.Errorf("status = %q, want %q", result.Status, "published")
+	}
+
+	// Verify latest tag also exists
+	result, err = client.Inspect(ctx, "test/test-skill:latest")
+	if err != nil {
+		t.Fatalf("Inspect latest after publish: %v", err)
+	}
+	if result.Status != "published" {
+		t.Errorf("latest status = %q, want %q", result.Status, "published")
+	}
+}
+
+func TestPromoteInvalidTransition(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	// Try invalid transition: draft -> published
+	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-draft", lifecycle.Published)
+	if err == nil {
+		t.Fatal("expected error for invalid transition draft -> published")
 	}
 }
