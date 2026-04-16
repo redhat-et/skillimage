@@ -65,11 +65,11 @@ bin/skillctl inspect examples/hello-world:1.0.0-draft
 ### Lifecycle promotion
 
 ```bash
-# Promote draft -> testing (retagged as 1.0.0-rc)
+# Promote draft -> testing (retagged as 1.0.0-testing)
 bin/skillctl promote examples/hello-world:1.0.0-draft --to testing --local
 
 # Promote testing -> published (retagged as 1.0.0 + latest)
-bin/skillctl promote examples/hello-world:1.0.0-rc --to published --local
+bin/skillctl promote examples/hello-world:1.0.0-testing --to published --local
 ```
 
 Promotion updates OCI manifest annotations and retags without
@@ -136,7 +136,7 @@ draft --> testing --> published --> deprecated --> archived
 | State | OCI tag | Example |
 | ----- | ------- | ------- |
 | draft | `<ver>-draft` | `1.0.0-draft` |
-| testing | `<ver>-rc` | `1.0.0-rc` |
+| testing | `<ver>-testing` | `1.0.0-testing` |
 | published | `<ver>` + `latest` | `1.0.0` |
 | deprecated | `<ver>` | `1.0.0` |
 | archived | tag removed | digest only |

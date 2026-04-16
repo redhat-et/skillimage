@@ -36,7 +36,7 @@ func TagForState(version string, state State) string {
 	case Draft:
 		return version + "-draft"
 	case Testing:
-		return version + "-rc"
+		return version + "-testing"
 	case Published:
 		return version
 	case Deprecated:

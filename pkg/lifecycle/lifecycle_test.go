@@ -43,7 +43,7 @@ func TestTagForState(t *testing.T) {
 		want    string
 	}{
 		{"1.2.0", lifecycle.Draft, "1.2.0-draft"},
-		{"1.2.0", lifecycle.Testing, "1.2.0-rc"},
+		{"1.2.0", lifecycle.Testing, "1.2.0-testing"},
 		{"1.2.0", lifecycle.Published, "1.2.0"},
 		{"1.2.0", lifecycle.Deprecated, "1.2.0"},
 		{"1.2.0", lifecycle.Archived, ""},

@@ -243,7 +243,7 @@ func TestPromoteLocal(t *testing.T) {
 	}
 
 	// Verify new tag exists with correct status
-	result, err := client.Inspect(ctx, "test/test-skill:1.0.0-rc")
+	result, err := client.Inspect(ctx, "test/test-skill:1.0.0-testing")
 	if err != nil {
 		t.Fatalf("Inspect after promote to testing: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestPromoteLocal(t *testing.T) {
 	}
 
 	// Promote testing -> published
-	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-rc", lifecycle.Published)
+	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-testing", lifecycle.Published)
 	if err != nil {
 		t.Fatalf("Promote to published: %v", err)
 	}

@@ -172,7 +172,7 @@ Tag rules:
 | State | Tag pattern | Example |
 | ----- | ----------- | ------- |
 | Draft | `<version>-draft` | `1.2.0-draft` |
-| Testing | `<version>-rc` | `1.2.0-rc` |
+| Testing | `<version>-testing` | `1.2.0-testing` |
 | Published | `<version>` + `latest` | `1.2.0`, `latest` |
 | Deprecated | `<version>` (no `latest`) | `1.2.0` |
 | Archived | Tag removed, digest-only | n/a |

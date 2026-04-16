@@ -34,14 +34,14 @@ func runImages(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tVERSION\tSTATUS\tDIGEST\tCREATED")
+	fmt.Fprintln(w, "NAME\tTAG\tSTATUS\tDIGEST\tCREATED")
 	for _, img := range images {
 		shortDigest := img.Digest
 		if len(shortDigest) > 19 {
 			shortDigest = shortDigest[:19]
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			img.Name, img.Version, img.Status, shortDigest, img.Created)
+			img.Name, img.Tag, img.Status, shortDigest, img.Created)
 	}
 	return w.Flush()
 }
