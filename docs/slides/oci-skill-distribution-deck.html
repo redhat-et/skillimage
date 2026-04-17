@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCI-Based Skill Distribution</title>
+  <link href="https://cdn.jsdelivr.net/npm/@rhds/tokens@3.0.2/css/global.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* === RESET & BASE === */
+    :root { color-scheme: dark; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* === COLOR VARIABLES === */
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #1f1f1f;
+      --bg-surface: #292929;
+      --text-primary: #ffffff;
+      --text-secondary: #c7c7c7;
+      --text-muted: #a3a3a3;
+      --accent: #ee0000;
+      --accent-dark: #a60000;
+      --accent-light: #f56e6e;
+      --tag-border: #383838;
+      --icon-filter: brightness(0) invert(1);
+      --icon-filter-accent: invert(12%) sepia(100%) saturate(10000%) hue-rotate(0deg) brightness(95%);
+      --font-display: var(--rh-font-family-heading, 'Red Hat Display', sans-serif);
+      --font-body: var(--rh-font-family-body-text, 'Red Hat Text', sans-serif);
+      --font-mono: var(--rh-font-family-code, 'Red Hat Mono', monospace);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* === SLIDE CONTAINER === */
+    .deck { position: relative; width: 100%; height: 100vh; }
+    .slide {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      height: 100vh;
+      padding: var(--rh-space-4xl, 80px) var(--rh-space-3xl, 64px);
+      position: relative;
+      overflow: hidden;
+    }
+    .slide.active { display: flex; }
+
+    /* === AMBIENT GLOW === */
+    .slide::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .slide:nth-child(even)::before {
+      top: -10%;
+      right: auto;
+      left: -15%;
+    }
+    .slide:first-child::before {
+      background: radial-gradient(ellipse, rgba(238,0,0,0.12) 0%, transparent 70%);
+    }
+    .slide:last-child::before {
+      top: -30%;
+      right: -5%;
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.14) 0%, transparent 70%);
+    }
+
+    .slide > * { position: relative; z-index: 1; }
+
+    /* === TYPOGRAPHY === */
+    h1 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-2xl, 3rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: var(--rh-space-lg, 24px);
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-lg, 2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: var(--rh-space-lg, 24px);
+    }
+    h3 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-md, 1.5rem);
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: var(--rh-space-md, 16px);
+    }
+    .subtitle {
+      font-size: var(--rh-font-size-body-text-xl, 1.25rem);
+      color: var(--text-muted);
+      max-width: 680px;
+      line-height: 1.6;
+    }
+    .accent { color: var(--accent); }
+    .body-text {
+      font-size: var(--rh-font-size-body-text-lg, 1.125rem);
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 800px;
+    }
+
+    /* === LOGO === */
+    .rh-logo { height: 28px; width: auto; }
+    .rh-logo.small { height: 20px; }
+    .rh-logo.large { height: 40px; }
+
+    /* === ICONS === */
+    .rh-icon { height: 48px; width: 48px; filter: var(--icon-filter); vertical-align: middle; }
+    .rh-icon.small { height: 24px; width: 24px; }
+    .rh-icon.medium { height: 48px; width: 48px; }
+    .rh-icon.large { height: 64px; width: 64px; }
+    .rh-icon.xl { height: 96px; width: 96px; }
+    .rh-icon.accent { filter: var(--icon-filter-accent); }
+
+    /* === BREADCRUMB === */
+    .breadcrumb {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      position: absolute;
+      top: var(--rh-space-xl, 32px);
+      left: var(--rh-space-3xl, 64px);
+      display: flex;
+      align-items: center;
+      gap: var(--rh-space-sm, 8px);
+    }
+
+    /* === SLIDE LABEL === */
+    .slide-label {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: var(--rh-space-md, 16px);
+    }
+
+    /* === TAGS === */
+    .tags { display: flex; flex-wrap: wrap; gap: var(--rh-space-sm, 8px); margin-top: var(--rh-space-lg, 24px); }
+    .tag {
+      display: inline-block;
+      padding: var(--rh-space-xs, 4px) var(--rh-space-md, 16px);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-pill, 64px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .tag.accent { border-color: var(--accent); color: var(--accent); }
+
+    /* === ATTRIBUTION === */
+    .attribution {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-muted);
+      position: absolute;
+      bottom: var(--rh-space-xl, 32px);
+      left: var(--rh-space-3xl, 64px);
+    }
+    .source {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      position: absolute;
+      bottom: var(--rh-space-xl, 32px);
+      left: var(--rh-space-3xl, 64px);
+    }
+
+    /* === GRID LAYOUTS === */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--rh-space-2xl, 48px);
+      margin-top: var(--rh-space-lg, 24px);
+      width: 100%;
+      max-width: 1100px;
+    }
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--rh-space-lg, 24px);
+      margin-top: var(--rh-space-lg, 24px);
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* === CARDS === */
+    .card {
+      background: var(--bg-secondary);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      box-shadow: var(--rh-box-shadow-sm, 0 2px 4px 0 rgba(21,21,21,0.2));
+    }
+    .card h3 { font-size: var(--rh-font-size-heading-sm, 1.25rem); }
+    .card p {
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-top: var(--rh-space-sm, 8px);
+    }
+    .card .drawback {
+      color: var(--accent-light);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      margin-top: var(--rh-space-sm, 8px);
+      font-style: italic;
+    }
+
+    /* === ARCHITECTURE BOXES === */
+    .arch-diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rh-space-md, 16px);
+      margin-top: var(--rh-space-lg, 24px);
+      width: 100%;
+      max-width: 1000px;
+    }
+    .arch-row {
+      display: flex;
+      gap: var(--rh-space-md, 16px);
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .arch-box {
+      background: var(--bg-surface);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-md, 16px) var(--rh-space-lg, 24px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: var(--rh-space-sm, 8px);
+      box-shadow: var(--rh-box-shadow-sm, 0 2px 4px 0 rgba(21,21,21,0.2));
+    }
+    .arch-box.highlight {
+      border-color: var(--accent);
+      background: rgba(238, 0, 0, 0.08);
+    }
+    .arch-box.wide { flex: 1; justify-content: center; }
+    .arch-arrow {
+      font-size: 1.5rem;
+      color: var(--text-muted);
+    }
+    .arch-arrow-down {
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* === CODE BLOCK === */
+    .code-block {
+      background: var(--bg-secondary);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      line-height: 1.8;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      max-width: 900px;
+      margin-top: var(--rh-space-md, 16px);
+    }
+    .code-block .cmd { color: var(--accent-light); }
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .arg { color: #6ec8f5; }
+
+    /* === YAML BLOCK === */
+    .yaml-block {
+      background: var(--bg-secondary);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      line-height: 1.7;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      max-width: 560px;
+      flex-shrink: 0;
+    }
+    .yaml-block .key { color: #6ec8f5; }
+    .yaml-block .val { color: var(--text-primary); }
+    .yaml-block .comment { color: var(--text-muted); }
+
+    /* === COMPARISON === */
+    .compare-col { padding: var(--rh-space-lg, 24px); }
+    .compare-col h3 { margin-bottom: var(--rh-space-md, 16px); }
+    .compare-col.before { opacity: 0.7; }
+    .compare-col.after { border-left: var(--rh-border-width-md, 2px) solid var(--accent); padding-left: var(--rh-space-2xl, 48px); }
+    .compare-list {
+      list-style: none;
+      padding: 0;
+    }
+    .compare-list li {
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+      color: var(--text-secondary);
+      line-height: 1.8;
+      padding-left: var(--rh-space-lg, 24px);
+      position: relative;
+    }
+    .compare-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .before .compare-list li::before { background: var(--text-muted); }
+    .after .compare-list li::before { background: var(--accent); }
+
+    /* === FEATURE LIST === */
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--rh-space-md, 16px);
+      margin-top: var(--rh-space-md, 16px);
+      max-width: 800px;
+    }
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--rh-space-md, 16px);
+      font-size: var(--rh-font-size-body-text-lg, 1.125rem);
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .feature-list li img { margin-top: 2px; flex-shrink: 0; }
+
+    /* === DIRECTORY TREE === */
+    .dir-tree {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+      line-height: 1.8;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px) var(--rh-space-xl, 32px);
+      max-width: 480px;
+    }
+    .dir-tree .highlight { color: var(--accent-light); }
+
+    /* === BIG NUMBER === */
+    .big-number {
+      font-family: var(--font-display);
+      font-size: 6rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: var(--rh-space-md, 16px);
+    }
+
+    /* === CONTROLS === */
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--rh-space-sm, 8px) var(--rh-space-xl, 32px);
+      z-index: 100;
+    }
+    .nav-hint {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+    .progress {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+    }
+    .progress .current { color: var(--accent); font-weight: 700; }
+
+    /* === NOTES PANEL === */
+    .notes-panel {
+      position: fixed;
+      bottom: 32px;
+      right: 0;
+      width: 380px;
+      max-height: 60vh;
+      background: var(--bg-secondary);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px) 0 0 var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 200;
+      font-family: var(--font-body);
+    }
+    .notes-panel.visible { transform: translateX(0); }
+    .notes-panel a { color: var(--accent-light); }
+
+    /* === LOGO FOOTER === */
+    .logo-footer {
+      position: absolute;
+      bottom: var(--rh-space-3xl, 64px);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* === THANK YOU === */
+    .thank-you-slide {
+      align-items: center;
+      text-align: center;
+      justify-content: center;
+    }
+    .thank-you-slide h1 {
+      font-size: 5rem;
+    }
+    .thank-you-slide .attribution {
+      position: static;
+      margin-top: var(--rh-space-xl, 32px);
+    }
+
+    /* === ANIMATIONS === */
+    .animate-in { opacity: 0; transform: translateY(20px); }
+    .slide.active .animate-in {
+      animation: fadeSlideUp 0.6s ease-out forwards;
+    }
+    .slide.active .animate-in:nth-child(2) { animation-delay: 0.1s; }
+    .slide.active .animate-in:nth-child(3) { animation-delay: 0.2s; }
+    .slide.active .animate-in:nth-child(4) { animation-delay: 0.3s; }
+    .slide.active .animate-in:nth-child(5) { animation-delay: 0.4s; }
+    .slide.active .animate-in:nth-child(6) { animation-delay: 0.5s; }
+    .slide.active .animate-in:nth-child(7) { animation-delay: 0.6s; }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .slide { padding: var(--rh-space-xl, 32px) var(--rh-space-lg, 24px); }
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.5rem; }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+      .breadcrumb { left: var(--rh-space-lg, 24px); }
+      .attribution, .source { left: var(--rh-space-lg, 24px); }
+      .big-number { font-size: 4rem; }
+      .thank-you-slide h1 { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 1: TITLE                                                -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>Tips:</strong><br>- Arrow keys or click to navigate<br>- Press N to toggle these notes<br>- Works in any modern browser &mdash; share the HTML file directly<br>- For best results, use fullscreen (F11)<br><br><strong>Context:</strong> This feature was implemented in PR #21 on redhat-et/docsclaw. The design spec is at docs/dev/2026-04-12-oci-skill-distribution-design.md.<br><br>[IMAGE OPPORTUNITY] Prompt for AI image gen: &quot;Abstract dark background with glowing red container outlines transforming into neural network nodes, conveying the idea of packaging intelligence for distribution. Style: minimal, geometric, dark with red accents.&quot;">
+      <div class="breadcrumb">
+        <svg class="rh-logo small" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 613 145" role="img" aria-label="Red Hat"><title>Red Hat</title><path d="M127.47,83.49c12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89,8.69,103.76.5,97.51.5,91.69.5,90,8,83.06,8c-6.68,0-11.64-5.6-17.89-5.6-6,0-9.91,4.09-12.93,12.5,0,0-8.41,23.72-9.49,27.16A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33C22.27,52,.5,55,.5,74.22c0,31.48,74.59,70.28,133.65,70.28,45.28,0,56.7-20.48,56.7-36.65,0-12.72-11-27.16-30.83-35.78" fill="#e00"/><path d="M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33l3.66-9.06A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45,12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42Z"/><path d="M579.74,92.8c0,11.89,7.15,17.67,20.19,17.67a52.11,52.11,0,0,0,11.89-1.68V95a24.84,24.84,0,0,1-7.68,1.16c-5.37,0-7.36-1.68-7.36-6.73V68.3h15.56V54.1H596.78v-18l-17,3.68V54.1H568.49V68.3h11.25Zm-53,.32c0-3.68,3.69-5.47,9.26-5.47a43.12,43.12,0,0,1,10.1,1.26v7.15a21.51,21.51,0,0,1-10.63,2.63c-5.46,0-8.73-2.1-8.73-5.57m5.2,17.56c6,0,10.84-1.26,15.36-4.31v3.37h16.82V74.08c0-13.56-9.14-21-24.39-21-8.52,0-16.94,2-26,6.1l6.1,12.52c6.52-2.74,12-4.42,16.83-4.42,7,0,10.62,2.73,10.62,8.31v2.73a49.53,49.53,0,0,0-12.62-1.58c-14.31,0-22.93,6-22.93,16.73,0,9.78,7.78,17.24,20.19,17.24m-92.44-.94h18.09V80.92h30.29v28.82H506V36.12H487.93V64.41H457.64V36.12H439.55ZM370.62,81.87c0-8,6.31-14.1,14.62-14.1A17.22,17.22,0,0,1,397,72.09V91.54A16.36,16.36,0,0,1,385.24,96c-8.2,0-14.62-6.1-14.62-14.09m26.61,27.87h16.83V32.44l-17,3.68V57.05a28.3,28.3,0,0,0-14.2-3.68c-16.19,0-28.92,12.51-28.92,28.5a28.25,28.25,0,0,0,28.4,28.6,25.12,25.12,0,0,0,14.93-4.83ZM320,67c5.36,0,9.88,3.47,11.67,8.83H308.47C310.15,70.3,314.36,67,320,67M291.33,82c0,16.2,13.25,28.82,30.28,28.82,9.36,0,16.2-2.53,23.25-8.42l-11.26-10c-2.63,2.74-6.52,4.21-11.14,4.21a14.39,14.39,0,0,1-13.68-8.83h39.65V83.55c0-17.67-11.88-30.39-28.08-30.39a28.57,28.57,0,0,0-29,28.81M262,51.58c6,0,9.36,3.78,9.36,8.31S268,68.2,262,68.2H244.11V51.58Zm-36,58.16h18.09V82.92h13.77l13.89,26.82H292l-16.2-29.45a22.27,22.27,0,0,0,13.88-20.72c0-13.25-10.41-23.45-26-23.45H226Z" fill="#fff"/></svg>
+        <span>› Office of CTO</span>
+      </div>
+      <div class="slide-label animate-in">DocsClaw &middot; April 2026</div>
+      <h1 class="animate-in">Distributing AI Skills<br>at <span class="accent">Enterprise Scale</span></h1>
+      <p class="subtitle animate-in">Package, sign, and distribute agent skills as OCI artifacts &mdash; using the same registries and trust chains you already run for container images.</p>
+      <div class="tags animate-in">
+        <span class="tag accent">OCI Artifacts</span>
+        <span class="tag">ORAS</span>
+        <span class="tag">Sigstore</span>
+        <span class="tag">Image Volumes</span>
+      </div>
+      <div class="attribution">Pavel Anni &middot; Office of CTO &middot; Red Hat</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 2: HOW SKILLS WORK                                      -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>Agent Skills Specification:</strong> <a href='https://agentskills.io/specification'>agentskills.io/specification</a><br><br>Skills are the unit of specialization for an agent. Each skill is a self-contained directory with instructions (SKILL.md) and optional metadata (skill.yaml). The agent discovers and loads them at startup.<br><br>Think of skills like plugins: the agent provides the runtime, skills provide domain expertise.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/brain.svg" alt=""> Skills</div>
+      <h2 class="animate-in">Your Agent Is Only as Good<br>as Its <span class="accent">Skills</span></h2>
+      <div class="two-col animate-in">
+        <div>
+          <p class="body-text">Skills are the unit of specialization. Each skill lives in its own subdirectory and gives the agent domain expertise.</p>
+          <ul class="feature-list" style="margin-top: 24px;">
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/notepad.svg" alt=""> <span><strong>SKILL.md</strong> &mdash; instructions in Agent Skills spec format</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/checklist.svg" alt=""> <span><strong>skill.yaml</strong> &mdash; metadata: tools, resources, versioning</span></li>
+          </ul>
+        </div>
+        <div class="dir-tree">
+          skills/<br>
+          <span class="highlight">&boxvr;&HorizontalLine;&HorizontalLine; resume-screener/</span><br>
+          &boxv;&ensp;&ensp; &boxvr;&HorizontalLine;&HorizontalLine; SKILL.md<br>
+          &boxv;&ensp;&ensp; &boxur;&HorizontalLine;&HorizontalLine; skill.yaml<br>
+          <span class="highlight">&boxvr;&HorizontalLine;&HorizontalLine; policy-comparator/</span><br>
+          &boxv;&ensp;&ensp; &boxvr;&HorizontalLine;&HorizontalLine; SKILL.md<br>
+          &boxv;&ensp;&ensp; &boxur;&HorizontalLine;&HorizontalLine; skill.yaml<br>
+          <span class="highlight">&boxur;&HorizontalLine;&HorizontalLine; checklist-auditor/</span><br>
+          &ensp;&ensp;&ensp; &boxvr;&HorizontalLine;&HorizontalLine; SKILL.md<br>
+          &ensp;&ensp;&ensp; &boxur;&HorizontalLine;&HorizontalLine; skill.yaml
+        </div>
+      </div>
+      <div class="source">Agent Skills Specification &mdash; agentskills.io</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 3: CURRENT DISTRIBUTION IS AD-HOC                       -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="Each of these methods gets progressively closer to enterprise readiness &mdash; ConfigMaps are already Kubernetes-native &mdash; but all three lack the supply chain guarantees (signing, versioning, audit) that regulated environments require.<br><br>ConfigMaps have a 1 MiB size limit (etcd constraint), so larger skills with examples or data files won't fit.">
+      <div class="slide-label animate-in"><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/alert.svg" alt=""> The Problem</div>
+      <h2 class="animate-in">Today's Skill Distribution Is <span class="accent">Ad-Hoc</span></h2>
+      <div class="three-col animate-in">
+        <div class="card">
+          <h3><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/share.svg" alt=""> Copy from a Friend</h3>
+          <p>Slack messages, email attachments, shared drives. "Hey, can you send me that skill you wrote?"</p>
+          <p class="drawback">No versioning. No provenance. No audit trail.</p>
+        </div>
+        <div class="card">
+          <h3><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/social/github.svg" alt=""> Clone from GitHub</h3>
+          <p>git clone the repo, copy the directory. Works for open source, common for personal agents.</p>
+          <p class="drawback">No signing. No atomic versioning. Auth is coarse-grained.</p>
+        </div>
+        <div class="card">
+          <h3><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/kubernetes-pod.svg" alt=""> Mount a ConfigMap</h3>
+          <p>Embed skill text in a Kubernetes ConfigMap. A natural first step for K8s deployments.</p>
+          <p class="drawback">1 MiB limit. No versioning. Mixes config with content.</p>
+        </div>
+      </div>
+      <p class="body-text animate-in" style="margin-top: 32px;">These get you started, but none provide the <strong style="color: var(--text-primary);">versioning, signing, and auditability</strong> that enterprise deployments require.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 4: ENTERPRISE NEEDS MORE                                -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="This is the core motivation. When you deploy AI agents in a regulated enterprise, you need the same supply chain guarantees you have for container images: signed artifacts, vulnerability scanning, access control, and audit logs.<br><br>Reproducibility matters because you need to prove which exact skill version produced an agent's output &mdash; especially in regulated industries (finance, healthcare, government).">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/secured.svg" alt=""> Enterprise Requirements</div>
+      <h2 class="animate-in">Enterprise Deployments Need<br><span class="accent">Trust Infrastructure</span></h2>
+      <ul class="feature-list animate-in">
+        <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-locked.svg" alt=""> <span><strong>Signing</strong> &mdash; Cryptographic proof of who published a skill and that it hasn't been tampered with</span></li>
+        <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/report.svg" alt=""> <span><strong>Auditability</strong> &mdash; Registry logs show who pulled what, when, and where it was deployed</span></li>
+        <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/lifecycle.svg" alt=""> <span><strong>Versioning</strong> &mdash; Immutable tags, semantic versions, rollback to a known-good skill set</span></li>
+        <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/automation.svg" alt=""> <span><strong>Reproducibility</strong> &mdash; Pin skills by digest (sha256) for byte-identical deployments across environments</span></li>
+        <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/key.svg" alt=""> <span><strong>Access control</strong> &mdash; Registry RBAC, pull secrets, org-scoped namespaces &mdash; the same policies you use for images</span></li>
+      </ul>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 5: OCI IS NOT JUST FOR CONTAINER IMAGES                 -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>ORAS (OCI Registry As Storage):</strong> <a href='https://oras.land'>oras.land</a><br><br>The OCI Distribution Specification was designed to be content-agnostic. Media types let registries and tools distinguish content without special handling. Helm charts have been distributed as OCI artifacts since Helm 3.8 (2022). WASM modules, ML models, and policy bundles are also distributed this way.<br><br>Key insight: your Quay/Harbor/GHCR registry can already store and serve non-image content. No infrastructure changes needed.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-registry.svg" alt=""> Key Insight</div>
+      <h2 class="animate-in">OCI Is Not Just for <span class="accent">Container Images</span></h2>
+      <div class="two-col animate-in">
+        <div>
+          <p class="body-text">The OCI Distribution Specification is <strong style="color: var(--text-primary);">content-agnostic</strong>. Any blob + a manifest + a media type = a valid OCI artifact.</p>
+          <p class="body-text" style="margin-top: 16px;">The <strong style="color: var(--text-primary);">ORAS</strong> project (OCI Registry As Storage) makes this practical: push any content to any OCI registry with standard tooling.</p>
+          <div class="tags" style="margin-top: 24px;">
+            <span class="tag">Helm Charts</span>
+            <span class="tag">WASM Modules</span>
+            <span class="tag">ML Models</span>
+            <span class="tag">Policy Bundles</span>
+            <span class="tag accent">Agent Skills</span>
+          </div>
+        </div>
+        <div class="arch-diagram" style="margin-top: 0;">
+          <div class="arch-box wide">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-registry.svg" alt="">
+            OCI Registry (Quay / GHCR / Harbor / Zot)
+          </div>
+          <div class="arch-arrow-down">&darr;&ensp;&ensp;Same protocol, same auth, same RBAC&ensp;&ensp;&darr;</div>
+          <div class="arch-row">
+            <div class="arch-box">
+              <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-image.svg" alt="">
+              Container Images
+            </div>
+            <div class="arch-box">
+              <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/certification.svg" alt="">
+              Helm Charts
+            </div>
+            <div class="arch-box highlight">
+              <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/brain.svg" alt="">
+              Agent Skills
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="source">ORAS &mdash; oras.land &middot; OCI Distribution Spec &mdash; github.com/opencontainers/distribution-spec</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 6: SKILLS AS OCI ARTIFACTS                              -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>Community alignment:</strong> This implementation aligns with the Agent Skills OCI Artifacts Specification by Thomas Vitale (<a href='https://github.com/ThomasVitale/agents-skills-oci-artifacts-spec'>github.com/ThomasVitale/agents-skills-oci-artifacts-spec</a>).<br><br>Media types used:<br>- application/vnd.oci.image.layer.v1.tar+gzip (skill content layer)<br>- application/vnd.oci.image.config.v1+json (config with SkillCard metadata)<br><br>The custom annotations (io.docsclaw.skill.*) carry SkillCard metadata in the manifest for fast inspection without pulling the full layer.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-image.svg" alt=""> Architecture</div>
+      <h2 class="animate-in">A Skill Becomes an <span class="accent">OCI Artifact</span></h2>
+      <div class="arch-diagram animate-in">
+        <div class="arch-row">
+          <div class="arch-box">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/folder.svg" alt="">
+            Skill Directory
+          </div>
+          <div class="arch-arrow">&xrarr;</div>
+          <div class="arch-box highlight">
+            <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-image.svg" alt="">
+            skillctl pack
+          </div>
+          <div class="arch-arrow">&xrarr;</div>
+          <div class="arch-box">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/storage.svg" alt="">
+            OCI Layout
+          </div>
+        </div>
+        <div class="arch-arrow-down">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/storage.svg" alt="">
+            OCI Layout
+          </div>
+          <div class="arch-arrow">&xrarr;</div>
+          <div class="arch-box highlight">
+            <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/upload.svg" alt="">
+            skillctl push
+          </div>
+          <div class="arch-arrow">&xrarr;</div>
+          <div class="arch-box">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-registry.svg" alt="">
+            quay.io/docsclaw/skill-*
+          </div>
+        </div>
+      </div>
+      <div class="two-col animate-in" style="margin-top: 32px; max-width: 1000px;">
+        <div>
+          <h3 style="color: var(--text-primary);">What goes into the artifact</h3>
+          <ul class="feature-list">
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/paper-lined.svg" alt=""> <span>SKILL.md &mdash; instructions</span></li>
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/checklist.svg" alt=""> <span>skill.yaml &mdash; SkillCard metadata</span></li>
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/paper-stack-lined.svg" alt=""> <span>Any supporting files in the directory</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color: var(--text-primary);">What the registry provides</h3>
+          <ul class="feature-list">
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/pricetag.svg" alt=""> <span>Immutable digest + mutable tags</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-locked.svg" alt=""> <span>RBAC &amp; pull secrets</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/fingerprint.svg" alt=""> <span>Cosign / sigstore signatures</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 7: THE WORKFLOW                                         -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="The --as-image flag produces an OCI image (with rootfs layer) instead of an OCI artifact. This is required for Kubernetes image volumes, which expect a proper container image that the kubelet can pull via the container runtime.<br><br>Credential resolution is automatic: skillctl reads podman/docker auth configs, so if you've done 'podman login quay.io', push/pull just works.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/command-line.svg" alt=""> Demo</div>
+      <h2 class="animate-in">The Workflow: <span class="accent">Pack, Push, Mount</span></h2>
+      <div class="code-block animate-in">
+        <span class="comment"># Pack skill into a local OCI layout</span><br>
+        <span class="cmd">$ skillctl pack</span> <span class="arg">examples/skills/resume-screener</span><br>
+        <span style="color: var(--text-muted);">Packed skill &rarr; oci-layout &middot; sha256:65af81ce... &middot; 1226 bytes</span><br><br>
+
+        <span class="comment"># Push to registry (uses podman/docker credentials)</span><br>
+        <span class="cmd">$ skillctl push</span> <span class="arg">examples/skills/resume-screener \<br>&ensp;&ensp;quay.io/docsclaw/skill-resume-screener:1.0.0</span><br>
+        <span style="color: var(--text-muted);">Pushed &rarr; quay.io/docsclaw/skill-resume-screener:1.0.0</span><br><br>
+
+        <span class="comment"># Push as mountable image (for image volumes)</span><br>
+        <span class="cmd">$ skillctl push --as-image</span> <span class="arg">examples/skills/resume-screener \<br>&ensp;&ensp;quay.io/docsclaw/skill-resume-screener:1.0.0-image</span><br><br>
+
+        <span class="comment"># Inspect remotely (no download needed)</span><br>
+        <span class="cmd">$ skillctl inspect</span> <span class="arg">quay.io/docsclaw/skill-resume-screener:1.0.0</span><br>
+        <span style="color: var(--text-muted);">Name: resume-screener &middot; Version: 1.0.0 &middot; Tools: [read_file]</span>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 8: SKILLCARD — INSPECT & CATALOG                        -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>SkillCard schema:</strong> docsclaw.io/v1alpha1 kind: SkillCard. The metadata travels inside the OCI manifest annotations, so 'skill inspect' reads it without pulling the full layer.<br><br>Future vision: a Skill Catalog UI that queries registries, reads SkillCard metadata, and presents a searchable, browsable catalog of available skills &mdash; like a curated app store for agent capabilities. Teams can discover skills by category, see resource requirements, check signing status, and deploy with one click.<br><br>The SkillCard schema is intentionally extensible: additional fields (compatibility matrix, test results, usage metrics) can be added without breaking existing skills.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/catalog.svg" alt=""> SkillCard</div>
+      <h2 class="animate-in">Every Skill Has a <span class="accent">Machine-Readable Identity</span></h2>
+      <div class="two-col animate-in">
+        <div>
+          <p class="body-text">The <strong style="color: var(--text-primary);">SkillCard</strong> (<code style="font-family: var(--font-mono); background: var(--bg-surface); padding: 2px 8px; border-radius: 3px;">skill.yaml</code>) carries structured metadata alongside the skill instructions. Inspect it remotely without pulling the full content:</p>
+          <div class="code-block" style="margin-top: 16px; max-width: 100%;">
+            <span class="cmd">$ skillctl inspect</span> <span class="arg">\<br>&ensp;&ensp;quay.io/docsclaw/skill-resume-screener:1.0.0</span><br><br>
+            <span style="color: #6ec8f5;">Name:</span>&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;resume-screener<br>
+            <span style="color: #6ec8f5;">Namespace:</span>&ensp;&ensp;&ensp;official<br>
+            <span style="color: #6ec8f5;">Version:</span>&ensp;&ensp;&ensp;&ensp;&ensp;1.0.0<br>
+            <span style="color: #6ec8f5;">Description:</span>&ensp;Screen resumes against<br>
+            &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;a job description...<br>
+            <span style="color: #6ec8f5;">Author:</span>&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;Red Hat ET<br>
+            <span style="color: #6ec8f5;">License:</span>&ensp;&ensp;&ensp;&ensp;&ensp;Apache-2.0<br>
+            <span style="color: #6ec8f5;">Tools:</span>&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;[read_file]<br>
+            <span style="color: #6ec8f5;">Memory:</span>&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;32Mi<br>
+            <span style="color: #6ec8f5;">CPU:</span>&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;100m
+          </div>
+        </div>
+        <div>
+          <h3 style="color: var(--text-primary); margin-bottom: 16px;">What SkillCard enables</h3>
+          <ul class="feature-list">
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/magnifying-glass.svg" alt=""> <span><strong>Discovery</strong> &mdash; search skills by name, namespace, category, author</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/scalable.svg" alt=""> <span><strong>Resource planning</strong> &mdash; CPU and memory hints before deployment</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/interoperability.svg" alt=""> <span><strong>Compatibility</strong> &mdash; required tools, dependencies, min agent version</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/certification.svg" alt=""> <span><strong>Governance</strong> &mdash; license, author, namespace for org-level trust policies</span></li>
+          </ul>
+          <div class="card" style="margin-top: 24px; border-color: var(--accent); background: rgba(238,0,0,0.05);">
+            <h3><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/catalog.svg" alt=""> Future: Skill Catalog</h3>
+            <p>A UI that queries registries, reads SkillCards, and presents a searchable catalog &mdash; browse by category, check signing status, deploy with one click.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 9: IMAGE VOLUMES (was 8)                                 -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>Image Volumes (KEP-4639):</strong> GA in Kubernetes 1.33 / OpenShift 4.20.<br><br>The kubelet pulls the image via the container runtime and mounts it read-only into the pod. No init container, no PVC, no emptyDir. The image is cached in the node's container image store &mdash; subsequent pods that use the same skill image don't need to pull again.<br><br>This is the exact same mechanism used for container images, so existing image pull policies (IfNotPresent, Always), pull secrets, and registry mirrors all work.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/kubernetes-pod.svg" alt=""> Preferred Method</div>
+      <h2 class="animate-in">Image Volumes: Mount Skills <span class="accent">Directly</span></h2>
+      <div class="two-col animate-in">
+        <div>
+          <p class="body-text">On OpenShift 4.20+ / Kubernetes 1.33+, the kubelet can mount an OCI image as a <strong style="color: var(--text-primary);">read-only volume</strong> &mdash; no init container needed.</p>
+          <ul class="feature-list" style="margin-top: 24px;">
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/container-image.svg" alt=""> <span>Kubelet pulls and caches skill images</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-locked.svg" alt=""> <span>Read-only mount &mdash; immutable at runtime</span></li>
+            <li><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/scalable.svg" alt=""> <span>No emptyDir, no node storage consumed</span></li>
+          </ul>
+        </div>
+        <div class="yaml-block">
+          <span class="key">volumes:</span><br>
+          &ensp;&ensp;- <span class="key">name:</span> <span class="val">skill-resume-screener</span><br>
+          &ensp;&ensp;&ensp;&ensp;<span class="key">image:</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="key">reference:</span> <span class="val" style="color: var(--accent-light);">quay.io/docsclaw/</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="val" style="color: var(--accent-light);">skill-resume-screener:1.0.0</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="key">pullPolicy:</span> <span class="val">IfNotPresent</span><br>
+          <br>
+          <span class="key">containers:</span><br>
+          &ensp;&ensp;- <span class="key">name:</span> <span class="val">docsclaw</span><br>
+          &ensp;&ensp;&ensp;&ensp;<span class="key">volumeMounts:</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="key">name:</span> <span class="val">skill-resume-screener</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="key">mountPath:</span> <span class="val">/skills/resume-screener</span>
+        </div>
+      </div>
+      <div class="source">KEP-4639 &middot; Kubernetes 1.33+ &middot; OpenShift 4.20+</div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 10: INIT CONTAINER FALLBACK                              -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="For older clusters, the init container approach uses skillctl to pull skills from the registry before the main container starts. Use a PVC (not emptyDir) to persist the skill cache across pod restarts and avoid filling node ephemeral storage.<br><br>Signature verification happens at pull time: --verify + --key flags enforce cosign verification before extracting the skill.">
+      <div class="slide-label animate-in"><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/server-stack.svg" alt=""> Universal Fallback</div>
+      <h2 class="animate-in">Init Container for <span class="accent">Older Clusters</span></h2>
+      <div class="two-col animate-in">
+        <div>
+          <p class="body-text">For Kubernetes &lt; 1.33 or OpenShift &lt; 4.20, use skillctl as an init container to pull skills before the agent starts.</p>
+          <ul class="feature-list" style="margin-top: 24px;">
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/download.svg" alt=""> <span>Pull at pod startup, verify signatures</span></li>
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/storage.svg" alt=""> <span>Cache on a PVC across restarts</span></li>
+            <li><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/share.svg" alt=""> <span>Share the volume with the main container</span></li>
+          </ul>
+        </div>
+        <div class="yaml-block">
+          <span class="key">initContainers:</span><br>
+          &ensp;&ensp;- <span class="key">name:</span> <span class="val">skill-puller</span><br>
+          &ensp;&ensp;&ensp;&ensp;<span class="key">image:</span> <span class="val">ghcr.io/redhat-et/</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="val">skillctl:latest</span><br>
+          &ensp;&ensp;&ensp;&ensp;<span class="key">command:</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val">"skillctl"</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val">"pull"</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val">"--verify"</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val">"-o"</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val">"/skills"</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;- <span class="val" style="color: var(--accent-light);">quay.io/docsclaw/</span><br>
+          &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;<span class="val" style="color: var(--accent-light);">skill-resume-screener:1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 11: COMPARISON                                          -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="The before/after contrast highlights what OCI distribution adds to the picture. All the &quot;after&quot; properties come for free from the OCI ecosystem &mdash; registries, sigstore, RBAC, pull policies &mdash; we're just reusing existing infrastructure.">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/scalable.svg" alt=""> Comparison</div>
+      <h2 class="animate-in">From Ad-Hoc to <span class="accent">Supply Chain</span></h2>
+      <div class="two-col animate-in">
+        <div class="compare-col before">
+          <h3><img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-unlocked.svg" alt=""> Before</h3>
+          <ul class="compare-list">
+            <li>git clone or manual copy</li>
+            <li>No versioning beyond branch/tag</li>
+            <li>No cryptographic signing</li>
+            <li>No audit trail for downloads</li>
+            <li>Auth at repo level only</li>
+            <li>ConfigMap size limits (1 MiB)</li>
+            <li>Mutable at runtime</li>
+          </ul>
+        </div>
+        <div class="compare-col after">
+          <h3><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-locked.svg" alt=""> After (OCI)</h3>
+          <ul class="compare-list">
+            <li>Push/pull with standard tooling</li>
+            <li>Semver tags + immutable digests</li>
+            <li>Cosign / sigstore signing</li>
+            <li>Registry access logs</li>
+            <li>Per-namespace RBAC + pull secrets</li>
+            <li>No size limits</li>
+            <li>Read-only image volume mount</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 12: NEXT STEPS / CTA                                    -->
+    <!-- ============================================================ -->
+    <div class="slide" data-notes="<strong>Resources:</strong><br>- PR #21: <a href='https://github.com/redhat-et/docsclaw/pull/21'>github.com/redhat-et/docsclaw/pull/21</a><br>- Design spec: docs/dev/2026-04-12-oci-skill-distribution-design.md<br>- OCI skills guide: docs/oci-skills-guide.md<br>- Agent Skills OCI Spec: <a href='https://github.com/ThomasVitale/agents-skills-oci-artifacts-spec'>github.com/ThomasVitale/agents-skills-oci-artifacts-spec</a><br>- ORAS project: <a href='https://oras.land'>oras.land</a><br>- Zot registry: <a href='https://zotregistry.dev'>zotregistry.dev</a>">
+      <div class="slide-label animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/rocket.svg" alt=""> Next Steps</div>
+      <h2 class="animate-in">Try It <span class="accent">Today</span></h2>
+      <ul class="feature-list animate-in">
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/command-line.svg" alt="">
+          <span><strong>Hands-on:</strong> spin up a local Zot registry, pack a skill, push, inspect, pull &mdash; 5 minutes end to end</span>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/code-branch.svg" alt="">
+          <span><strong>Review the PR:</strong> design decisions, media types, and annotation schema are documented in the design spec &mdash; feedback welcome</span>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/collaboration.svg" alt="">
+          <span><strong>Community:</strong> should we propose SkillCard alignment to the Agent Skills OCI Artifacts Specification?</span>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/fingerprint.svg" alt="">
+          <span><strong>Next milestone:</strong> full sigstore integration for keyless skill signing and verification</span>
+        </li>
+      </ul>
+      <div class="tags animate-in" style="margin-top: 32px;">
+        <span class="tag accent">github.com/redhat-et/docsclaw</span>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SLIDE 13: THANK YOU                                           -->
+    <!-- ============================================================ -->
+    <div class="slide thank-you-slide" data-notes="Thank you for your time. Questions and feedback welcome.">
+      <h1 class="animate-in">Thank <span class="accent">You</span></h1>
+      <div class="attribution animate-in">Pavel Anni &middot; Office of CTO &middot; Red Hat</div>
+      <div class="logo-footer animate-in">
+        <svg class="rh-logo large" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 613 145" role="img" aria-label="Red Hat"><title>Red Hat</title><path d="M127.47,83.49c12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89,8.69,103.76.5,97.51.5,91.69.5,90,8,83.06,8c-6.68,0-11.64-5.6-17.89-5.6-6,0-9.91,4.09-12.93,12.5,0,0-8.41,23.72-9.49,27.16A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33C22.27,52,.5,55,.5,74.22c0,31.48,74.59,70.28,133.65,70.28,45.28,0,56.7-20.48,56.7-36.65,0-12.72-11-27.16-30.83-35.78" fill="#e00"/><path d="M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33l3.66-9.06A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45,12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42Z"/><path d="M579.74,92.8c0,11.89,7.15,17.67,20.19,17.67a52.11,52.11,0,0,0,11.89-1.68V95a24.84,24.84,0,0,1-7.68,1.16c-5.37,0-7.36-1.68-7.36-6.73V68.3h15.56V54.1H596.78v-18l-17,3.68V54.1H568.49V68.3h11.25Zm-53,.32c0-3.68,3.69-5.47,9.26-5.47a43.12,43.12,0,0,1,10.1,1.26v7.15a21.51,21.51,0,0,1-10.63,2.63c-5.46,0-8.73-2.1-8.73-5.57m5.2,17.56c6,0,10.84-1.26,15.36-4.31v3.37h16.82V74.08c0-13.56-9.14-21-24.39-21-8.52,0-16.94,2-26,6.1l6.1,12.52c6.52-2.74,12-4.42,16.83-4.42,7,0,10.62,2.73,10.62,8.31v2.73a49.53,49.53,0,0,0-12.62-1.58c-14.31,0-22.93,6-22.93,16.73,0,9.78,7.78,17.24,20.19,17.24m-92.44-.94h18.09V80.92h30.29v28.82H506V36.12H487.93V64.41H457.64V36.12H439.55ZM370.62,81.87c0-8,6.31-14.1,14.62-14.1A17.22,17.22,0,0,1,397,72.09V91.54A16.36,16.36,0,0,1,385.24,96c-8.2,0-14.62-6.1-14.62-14.09m26.61,27.87h16.83V32.44l-17,3.68V57.05a28.3,28.3,0,0,0-14.2-3.68c-16.19,0-28.92,12.51-28.92,28.5a28.25,28.25,0,0,0,28.4,28.6,25.12,25.12,0,0,0,14.93-4.83ZM320,67c5.36,0,9.88,3.47,11.67,8.83H308.47C310.15,70.3,314.36,67,320,67M291.33,82c0,16.2,13.25,28.82,30.28,28.82,9.36,0,16.2-2.53,23.25-8.42l-11.26-10c-2.63,2.74-6.52,4.21-11.14,4.21a14.39,14.39,0,0,1-13.68-8.83h39.65V83.55c0-17.67-11.88-30.39-28.08-30.39a28.57,28.57,0,0,0-29,28.81M262,51.58c6,0,9.36,3.78,9.36,8.31S268,68.2,262,68.2H244.11V51.58Zm-36,58.16h18.09V82.92h13.77l13.89,26.82H292l-16.2-29.45a22.27,22.27,0,0,0,13.88-20.72c0-13.25-10.41-23.45-26-23.45H226Z" fill="#fff"/></svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="nav-hint">&larr; &rarr; or click to navigate &middot; N for additional context</div>
+    <div class="progress"><span class="current">1</span> / <span class="total">13</span></div>
+  </div>
+
+  <!-- NOTES PANEL -->
+  <div class="notes-panel"></div>
+
+  <script>
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const currentEl = document.querySelector('.current');
+      const totalEl = document.querySelector('.total');
+      const notesPanel = document.querySelector('.notes-panel');
+      let idx = 0;
+      let notesVisible = false;
+
+      totalEl.textContent = slides.length;
+
+      function pauseAllMedia() {
+        document.querySelectorAll('.slide:not(.active) video').forEach(v => v.pause());
+        document.querySelectorAll('.slide:not(.active) iframe').forEach(f => {
+          f.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+          f.contentWindow.postMessage('{"method":"pause"}', '*');
+        });
+      }
+
+      function playActiveMedia() {
+        document.querySelectorAll('.slide.active video').forEach(v => v.play());
+        document.querySelectorAll('.slide.active iframe').forEach(f => {
+          f.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+          f.contentWindow.postMessage('{"method":"play"}', '*');
+        });
+      }
+
+      function show(i) {
+        slides.forEach((s, j) => {
+          s.classList.toggle('active', j === i);
+          s.style.display = j === i ? 'flex' : 'none';
+        });
+        currentEl.textContent = i + 1;
+        pauseAllMedia();
+        playActiveMedia();
+        if (notesVisible && notesPanel) {
+          const note = slides[i].dataset.notes || '';
+          notesPanel.innerHTML = note;
+        }
+      }
+
+      function next() { if (idx < slides.length - 1) { idx++; show(idx); } }
+      function prev() { if (idx > 0) { idx--; show(idx); } }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+        if (e.key === 'ArrowLeft') { prev(); }
+        if (e.key === 'n' || e.key === 'N') {
+          notesVisible = !notesVisible;
+          if (notesPanel) notesPanel.classList.toggle('visible', notesVisible);
+          show(idx);
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.controls') || e.target.closest('.notes-panel') || e.target.closest('.video-container') || e.target.closest('.media-container')) return;
+        const x = e.clientX / window.innerWidth;
+        x > 0.5 ? next() : prev();
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+      document.addEventListener('touchend', (e) => {
+        const diff = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(diff) > 50) { diff < 0 ? next() : prev(); }
+      });
+
+      show(0);
+    })();
+  </script>
+</body>
+</html>
