@@ -242,25 +242,23 @@ func createLayer(dir string) (*bytes.Buffer, godigest.Digest, error) {
 			return nil
 		}
 
+		if !info.Mode().IsRegular() && !info.IsDir() {
+			return nil
+		}
+
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return fmt.Errorf("creating tar header for %s: %w", rel, err)
 		}
-		// Use forward-slash relative paths at root of archive.
 		header.Name = filepath.ToSlash(rel)
 
 		if err := tw.WriteHeader(header); err != nil {
 			return fmt.Errorf("writing tar header for %s: %w", rel, err)
 		}
 
-		if !info.IsDir() {
-			f, err := os.Open(path)
-			if err != nil {
-				return fmt.Errorf("opening %s: %w", rel, err)
-			}
-			defer f.Close()
-			if _, err := io.Copy(tw, f); err != nil {
-				return fmt.Errorf("copying %s: %w", rel, err)
+		if info.Mode().IsRegular() {
+			if err := copyFileToTar(tw, path, rel); err != nil {
+				return err
 			}
 		}
 
@@ -288,6 +286,18 @@ func createLayer(dir string) (*bytes.Buffer, godigest.Digest, error) {
 	}
 
 	return &gzBuf, uncompressedDigest, nil
+}
+
+func copyFileToTar(tw *tar.Writer, path, rel string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("opening %s: %w", rel, err)
+	}
+	defer f.Close()
+	if _, err := io.Copy(tw, f); err != nil {
+		return fmt.Errorf("copying %s: %w", rel, err)
+	}
+	return nil
 }
 
 // buildImageConfig creates the OCI image config JSON (FROM scratch equivalent).

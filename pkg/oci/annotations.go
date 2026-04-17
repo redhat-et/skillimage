@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // buildAnnotations maps SkillCard fields to standard OCI annotation keys
-// and the custom skillregistry status annotation.
+// and the custom skillimage status annotation.
 func buildAnnotations(sc *skillcard.SkillCard) map[string]string {
 	ann := make(map[string]string)
 
@@ -27,6 +28,9 @@ func buildAnnotations(sc *skillcard.SkillCard) map[string]string {
 	desc := sc.Metadata.Description
 	if len(desc) > 256 {
 		desc = desc[:256]
+		for len(desc) > 0 && !utf8.ValidString(desc) {
+			desc = desc[:len(desc)-1]
+		}
 	}
 	ann[ocispec.AnnotationDescription] = desc
 

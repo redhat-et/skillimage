@@ -56,7 +56,7 @@ bin/skillctl validate examples/hello-world/
 bin/skillctl pack examples/hello-world/
 
 # List local images
-bin/skillctl images
+bin/skillctl list
 
 # Inspect metadata and OCI details
 bin/skillctl inspect examples/hello-world:1.0.0-draft

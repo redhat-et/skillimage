@@ -106,6 +106,9 @@ func promote(ctx context.Context, store promotableStore, ref string, to lifecycl
 	// 8. Compute the new tag and tag the manifest.
 	namespaceName := parseNameFromTag(ref)
 	version := manifest.Annotations[ocispec.AnnotationVersion]
+	if version == "" {
+		return fmt.Errorf("manifest missing %s annotation; cannot compute tag", ocispec.AnnotationVersion)
+	}
 	newTag := lifecycle.TagForState(version, to)
 
 	if newTag != "" {

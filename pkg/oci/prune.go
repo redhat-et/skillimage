@@ -24,7 +24,7 @@ type PruneResult struct {
 // promotion. For each name+version group, it keeps only the image
 // with the highest lifecycle state and removes the rest.
 func (c *Client) Prune(ctx context.Context) (*PruneResult, error) {
-	images, err := c.listLocalWithTags()
+	images, err := c.listLocalWithTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("listing images: %w", err)
 	}
@@ -73,8 +73,7 @@ func (c *Client) Prune(ctx context.Context) (*PruneResult, error) {
 
 // listLocalWithTags is like ListLocal but does NOT deduplicate by
 // digest, so we can see all tags including "latest".
-func (c *Client) listLocalWithTags() ([]LocalImage, error) {
-	ctx := context.Background()
+func (c *Client) listLocalWithTags(ctx context.Context) ([]LocalImage, error) {
 	var images []LocalImage
 
 	err := c.store.Tags(ctx, "", func(tags []string) error {

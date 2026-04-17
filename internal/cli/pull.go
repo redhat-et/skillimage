@@ -33,8 +33,7 @@ Examples:
 }
 
 func looksLocal(ref string) bool {
-	parts := strings.SplitN(ref, "/", 2)
-	return len(parts) < 2 || (!strings.Contains(parts[0], ".") && !strings.Contains(parts[0], ":"))
+	return !strings.Contains(ref, "/")
 }
 
 func runPull(cmd *cobra.Command, ref string, outputDir string) error {

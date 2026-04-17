@@ -24,14 +24,9 @@ func (c *Client) Pull(ctx context.Context, ref string, opts PullOptions) (ocispe
 	}
 
 	_, tag := splitRefTag(ref)
-	desc, err := oras.Copy(ctx, repo, tag, c.store, tag, oras.DefaultCopyOptions)
+	desc, err := oras.Copy(ctx, repo, tag, c.store, ref, oras.DefaultCopyOptions)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("pulling %s: %w", ref, err)
-	}
-
-	// Also tag with the full ref so ListLocal can find it.
-	if err := c.store.Tag(ctx, desc, ref); err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("tagging pulled image: %w", err)
 	}
 
 	if opts.OutputDir != "" {
