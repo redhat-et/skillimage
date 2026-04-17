@@ -24,7 +24,7 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 	if err != nil {
 		return nil, fmt.Errorf("fetching manifest: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	manifestBytes, err := io.ReadAll(rc)
 	if err != nil {
