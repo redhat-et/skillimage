@@ -109,6 +109,20 @@ func skillNameFromRef(ref string) string {
 	return name
 }
 
+// sanitizeTarPath validates that a tar entry name stays within the target
+// directory, preventing path traversal (Zip Slip) attacks.
+func sanitizeTarPath(name string, targetDir string) (string, error) {
+	target := filepath.Join(targetDir, filepath.Clean(name))
+	rel, err := filepath.Rel(targetDir, target)
+	if err != nil {
+		return "", fmt.Errorf("tar entry %q: %w", name, err)
+	}
+	if strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || rel == ".." {
+		return "", fmt.Errorf("tar entry %q escapes target directory", name)
+	}
+	return target, nil
+}
+
 // extractLayer fetches a layer from the store, decompresses it, and extracts
 // tar entries into targetDir with path traversal protection.
 func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targetDir string) error {
@@ -134,12 +148,9 @@ func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targ
 			return fmt.Errorf("reading tar entry: %w", err)
 		}
 
-		// PATH TRAVERSAL PROTECTION: ensure the entry stays within targetDir.
-		cleanName := filepath.Clean(header.Name)
-		target := filepath.Join(targetDir, cleanName)
-		if !strings.HasPrefix(target, filepath.Clean(targetDir)+string(os.PathSeparator)) &&
-			target != filepath.Clean(targetDir) {
-			return fmt.Errorf("tar entry %q escapes target directory", header.Name)
+		target, err := sanitizeTarPath(header.Name, targetDir)
+		if err != nil {
+			return err
 		}
 
 		switch header.Typeflag {
@@ -148,7 +159,6 @@ func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targ
 				return fmt.Errorf("creating directory %s: %w", target, err)
 			}
 		case tar.TypeReg:
-			// Ensure parent directory exists.
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("creating parent directory for %s: %w", target, err)
 			}
