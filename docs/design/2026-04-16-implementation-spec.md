@@ -43,7 +43,7 @@ lifecycle governance on top of standard container tooling.
 
 The SkillCard YAML inside the image has no `status` field.
 Status is stored as an OCI manifest annotation
-(`io.skillregistry.status`). This keeps image content immutable
+(`io.skillimage.status`). This keeps image content immutable
 across promotions — the same layer digest from draft through
 published. Promotion updates annotations and retags without
 repacking.
@@ -111,7 +111,7 @@ Populated at pack time from SkillCard fields:
 | `org.opencontainers.image.created` | RFC 3339 timestamp at pack time |
 | `org.opencontainers.image.source` | `provenance.source` |
 | `org.opencontainers.image.revision` | `provenance.commit` |
-| `io.skillregistry.status` | Lifecycle state (custom annotation) |
+| `io.skillimage.status` | Lifecycle state (custom annotation) |
 
 ## Package design
 
@@ -221,7 +221,7 @@ non-existent path, it uses that path as-is.
 implementation.
 
 **Promote mechanics:** Fetches manifest from registry, creates
-a new manifest with updated `io.skillregistry.status` annotation
+a new manifest with updated `io.skillimage.status` annotation
 referencing the same layer digests, pushes new manifest with new
 tag, removes old tag. No layer data crosses the wire.
 

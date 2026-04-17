@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "NAME\tTAG\tSTATUS\tDIGEST\tCREATED")
 	for _, img := range images {
 		shortDigest := img.Digest

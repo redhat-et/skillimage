@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://skills.redhat.io/schemas/skillcard-v1.json",
+  "$id": "https://skillimage.io/schemas/skillcard-v1.json",
   "title": "SkillCard",
   "description": "Schema for AI agent skill metadata",
   "type": "object",

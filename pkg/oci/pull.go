@@ -13,23 +13,17 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 // Pull copies an image from a remote registry into the local store.
 // If opts.OutputDir is set, the image is also unpacked into that directory.
 func (c *Client) Pull(ctx context.Context, ref string, opts PullOptions) (ocispec.Descriptor, error) {
-	repoRef := ref
-	if idx := strings.LastIndex(ref, ":"); idx >= 0 {
-		repoRef = ref[:idx]
-	}
-
-	repo, err := remote.NewRepository(repoRef)
+	repo, err := newRemoteRepository(ref)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("creating remote repository: %w", err)
 	}
 
-	tag := tagFromRef(ref)
+	_, tag := splitRefTag(ref)
 	desc, err := oras.Copy(ctx, repo, tag, c.store, tag, oras.DefaultCopyOptions)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("pulling %s: %w", ref, err)
@@ -123,6 +117,22 @@ func sanitizeTarPath(name string, targetDir string) (string, error) {
 	return target, nil
 }
 
+func clampDirMode(mode int64) os.FileMode {
+	m := os.FileMode(mode) & 0o755
+	if m == 0 {
+		m = 0o755
+	}
+	return m
+}
+
+func clampFileMode(mode int64) os.FileMode {
+	m := os.FileMode(mode) & 0o644
+	if m == 0 {
+		m = 0o644
+	}
+	return m
+}
+
 // extractLayer fetches a layer from the store, decompresses it, and extracts
 // tar entries into targetDir with path traversal protection.
 func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targetDir string) error {
@@ -155,14 +165,14 @@ func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targ
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+			if err := os.MkdirAll(target, clampDirMode(header.Mode)); err != nil {
 				return fmt.Errorf("creating directory %s: %w", target, err)
 			}
 		case tar.TypeReg:
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("creating parent directory for %s: %w", target, err)
 			}
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(header.Mode))
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, clampFileMode(header.Mode))
 			if err != nil {
 				return fmt.Errorf("creating file %s: %w", target, err)
 			}

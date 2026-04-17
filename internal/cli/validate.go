@@ -46,11 +46,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(errs) > 0 {
-		fmt.Fprintf(os.Stderr, "✗ %s has %d error(s):\n", path, len(errs))
+		fmt.Fprintf(cmd.ErrOrStderr(), "✗ %s has %d error(s):\n", path, len(errs))
 		for _, e := range errs {
-			fmt.Fprintf(os.Stderr, "  %s: %s\n", e.Field, e.Message)
+			fmt.Fprintf(cmd.ErrOrStderr(), "  %s: %s\n", e.Field, e.Message)
 		}
-		os.Exit(1)
+		return fmt.Errorf("validation failed with %d error(s)", len(errs))
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "✓ %s is valid\n", path)

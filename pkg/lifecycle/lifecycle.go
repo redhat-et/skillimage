@@ -15,7 +15,7 @@ const (
 	Archived   State = "archived"
 )
 
-const StatusAnnotation = "io.skillregistry.status"
+const StatusAnnotation = "io.skillimage.status"
 
 var transitions = map[State]State{
 	Draft:      Testing,

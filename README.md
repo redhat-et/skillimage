@@ -142,7 +142,7 @@ draft --> testing --> published --> deprecated --> archived
 | archived | tag removed | digest only |
 
 Status is stored in OCI manifest annotations
-(`io.skillregistry.status`), not inside the image. Image content
+(`io.skillimage.status`), not inside the image. Image content
 is immutable across promotions.
 
 ## License
