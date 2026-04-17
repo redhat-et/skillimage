@@ -53,8 +53,8 @@ func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error
 	if err != nil {
 		return fmt.Errorf("fetching manifest: %w", err)
 	}
+	defer func() { _ = rc.Close() }()
 	manifestBytes, err := io.ReadAll(rc)
-	rc.Close()
 	if err != nil {
 		return fmt.Errorf("reading manifest: %w", err)
 	}
