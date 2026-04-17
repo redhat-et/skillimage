@@ -128,6 +128,18 @@ func clampFileMode(mode int64) os.FileMode {
 	return m
 }
 
+func extractFile(target string, r io.Reader, mode os.FileMode) error {
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return fmt.Errorf("creating file %s: %w", target, err)
+	}
+	defer func() { _ = f.Close() }()
+	if _, err := io.Copy(f, r); err != nil {
+		return fmt.Errorf("writing file %s: %w", target, err)
+	}
+	return nil
+}
+
 // extractLayer fetches a layer from the store, decompresses it, and extracts
 // tar entries into targetDir with path traversal protection.
 func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targetDir string) error {
@@ -135,13 +147,13 @@ func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targ
 	if err != nil {
 		return fmt.Errorf("fetching layer: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	gz, err := gzip.NewReader(rc)
 	if err != nil {
 		return fmt.Errorf("creating gzip reader: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	tr := tar.NewReader(gz)
 	for {
@@ -167,15 +179,9 @@ func extractLayer(ctx context.Context, c *Client, layer ocispec.Descriptor, targ
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("creating parent directory for %s: %w", target, err)
 			}
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, clampFileMode(header.Mode))
-			if err != nil {
-				return fmt.Errorf("creating file %s: %w", target, err)
+			if err := extractFile(target, tr, clampFileMode(header.Mode)); err != nil {
+				return err
 			}
-			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
-				return fmt.Errorf("writing file %s: %w", target, err)
-			}
-			f.Close()
 		}
 	}
 
