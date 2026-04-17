@@ -1,6 +1,6 @@
 # Binaries
 bin/
-skillctl
+/skillctl
 *.exe
 
 # Go

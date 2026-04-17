@@ -43,7 +43,7 @@ lifecycle governance on top of standard container tooling.
 
 The SkillCard YAML inside the image has no `status` field.
 Status is stored as an OCI manifest annotation
-(`io.skillregistry.status`). This keeps image content immutable
+(`io.skillimage.status`). This keeps image content immutable
 across promotions — the same layer digest from draft through
 published. Promotion updates annotations and retags without
 repacking.
@@ -61,9 +61,7 @@ ImageVolumes. See the design doc for the full rationale.
 
 ### apiVersion
 
-`skills.redhat.io/v1alpha1` — uses a Red Hat-controlled domain.
-May change to a community domain if the project grows beyond
-Red Hat.
+`skillimage.io/v1alpha1` — project-owned domain, vendor-neutral.
 
 ## SkillCard schema
 
@@ -73,7 +71,7 @@ Red Hat.
 
 | Field | Constraints |
 | ----- | ----------- |
-| `apiVersion` | Must be `skills.redhat.io/v1alpha1` |
+| `apiVersion` | Must be `skillimage.io/v1alpha1` |
 | `kind` | Must be `SkillCard` |
 | `metadata.name` | 1-64 chars, `[a-z0-9-]`, no leading/trailing/consecutive hyphens |
 | `metadata.namespace` | 1-128 chars, `[a-z0-9-/]`, each segment follows name rules |
@@ -113,7 +111,7 @@ Populated at pack time from SkillCard fields:
 | `org.opencontainers.image.created` | RFC 3339 timestamp at pack time |
 | `org.opencontainers.image.source` | `provenance.source` |
 | `org.opencontainers.image.revision` | `provenance.commit` |
-| `io.skillregistry.status` | Lifecycle state (custom annotation) |
+| `io.skillimage.status` | Lifecycle state (custom annotation) |
 
 ## Package design
 
@@ -172,7 +170,7 @@ Tag rules:
 | State | Tag pattern | Example |
 | ----- | ----------- | ------- |
 | Draft | `<version>-draft` | `1.2.0-draft` |
-| Testing | `<version>-rc` | `1.2.0-rc` |
+| Testing | `<version>-testing` | `1.2.0-testing` |
 | Published | `<version>` + `latest` | `1.2.0`, `latest` |
 | Deprecated | `<version>` (no `latest`) | `1.2.0` |
 | Archived | Tag removed, digest-only | n/a |
@@ -223,7 +221,7 @@ non-existent path, it uses that path as-is.
 implementation.
 
 **Promote mechanics:** Fetches manifest from registry, creates
-a new manifest with updated `io.skillregistry.status` annotation
+a new manifest with updated `io.skillimage.status` annotation
 referencing the same layer digests, pushes new manifest with new
 tag, removes old tag. No layer data crosses the wire.
 

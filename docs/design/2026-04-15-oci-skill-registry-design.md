@@ -213,7 +213,7 @@ This mirrors standard software release management.
 | State      | Tag pattern               | Example           |
 | ---------- | ------------------------- | ----------------- |
 | draft      | `<version>-draft`         | `1.2.0-draft`     |
-| testing    | `<version>-rc`            | `1.2.0-rc`        |
+| testing    | `<version>-testing`       | `1.2.0-testing`   |
 | published  | `<version>` + `latest`    | `1.2.0`, `latest` |
 | deprecated | `<version>` (no `latest`) | `1.2.0`           |
 | archived   | tag removed, digest-only  | —                 |
@@ -797,7 +797,7 @@ The server executes the following sequence atomically:
 
 1. Verify the caller has the `skill:publish` role in their OIDC
    token claims.
-1. Resolve the OCI digest of the image at the `<version>-rc` tag.
+1. Resolve the OCI digest of the image at the `<version>-testing` tag.
 1. Exchange the caller's OIDC token for a short-lived Fulcio
    certificate. The certificate subject is the approver's email
    address (or a workload identity for CI-initiated promotions).
