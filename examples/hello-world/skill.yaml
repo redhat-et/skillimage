@@ -12,6 +12,7 @@ metadata:
   tags:
     - example
     - getting-started
+  compatibility: claude-3.5-sonnet
   authors:
     - name: OCTO Team
       email: octo@redhat.com
