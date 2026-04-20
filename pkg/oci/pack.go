@@ -52,6 +52,13 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		return ocispec.Descriptor{}, fmt.Errorf("skill.yaml validation failed: %s", strings.Join(msgs, "; "))
 	}
 
+	// 2b. Count words in SKILL.md if present.
+	var wordCount int
+	skillMDPath := filepath.Join(skillDir, "SKILL.md")
+	if data, err := os.ReadFile(skillMDPath); err == nil {
+		wordCount = len(strings.Fields(string(data)))
+	}
+
 	// 3. Create a tar.gz layer of all files in the directory.
 	layerBuf, uncompressedDigest, err := createLayer(skillDir)
 	if err != nil {
@@ -86,7 +93,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 	}
 
 	// 6. Build annotations from SkillCard.
-	annotations := buildAnnotations(sc)
+	annotations := buildAnnotations(sc, wordCount)
 
 	// 7. Create and push the OCI manifest.
 	manifest := ocispec.Manifest{

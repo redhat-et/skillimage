@@ -52,6 +52,9 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 	authors := ann[ocispec.AnnotationAuthors]
 	license := ann[ocispec.AnnotationLicenses]
 	created := ann[ocispec.AnnotationCreated]
+	tags := ann[AnnotationTags]
+	compatibility := ann[AnnotationCompatibility]
+	wordCount := ann[AnnotationWordCount]
 
 	// Compute total size from layers.
 	var totalSize int64
@@ -60,17 +63,20 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 	}
 
 	return &InspectResult{
-		Name:        name,
-		DisplayName: displayName,
-		Version:     version,
-		Status:      status,
-		Description: description,
-		Authors:     authors,
-		License:     license,
-		Digest:      desc.Digest.String(),
-		Created:     created,
-		MediaType:   desc.MediaType,
-		Size:        totalSize,
-		LayerCount:  len(manifest.Layers),
+		Name:          name,
+		DisplayName:   displayName,
+		Version:       version,
+		Status:        status,
+		Description:   description,
+		Authors:       authors,
+		License:       license,
+		Tags:          tags,
+		Compatibility: compatibility,
+		WordCount:     wordCount,
+		Digest:        desc.Digest.String(),
+		Created:       created,
+		MediaType:     desc.MediaType,
+		Size:          totalSize,
+		LayerCount:    len(manifest.Layers),
 	}, nil
 }

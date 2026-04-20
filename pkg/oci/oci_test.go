@@ -276,6 +276,57 @@ func TestPromoteLocal(t *testing.T) {
 	}
 }
 
+func TestAnnotationsIncludeTags(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: annotated-skill
+  namespace: test
+  version: 2.0.0
+  description: Skill with tags and compat.
+  tags:
+    - kubernetes
+    - debugging
+  compatibility: claude-3.5-sonnet
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("one two three four five"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/annotated-skill:2.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.Tags != `["kubernetes","debugging"]` {
+		t.Errorf("tags = %q, want %q", result.Tags, `["kubernetes","debugging"]`)
+	}
+	if result.Compatibility != "claude-3.5-sonnet" {
+		t.Errorf("compatibility = %q, want %q", result.Compatibility, "claude-3.5-sonnet")
+	}
+	if result.WordCount != "5" {
+		t.Errorf("wordcount = %q, want %q", result.WordCount, "5")
+	}
+}
+
 func TestPromoteInvalidTransition(t *testing.T) {
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)
