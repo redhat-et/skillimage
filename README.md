@@ -89,6 +89,30 @@ bin/skillctl pull quay.io/myorg/hello-world:1.0.0 -o ./skills/
 Authentication uses your existing `~/.docker/config.json` or
 Podman's `auth.json` -- no separate login needed.
 
+### Inspect with standard tools
+
+Skill images are standard OCI images. You can inspect metadata
+from any registry without downloading the image:
+
+```bash
+# View all metadata annotations (no image download)
+skopeo inspect docker://quay.io/myorg/hello-world:1.0.0
+
+# Get just the skill tags
+skopeo inspect docker://quay.io/myorg/hello-world:1.0.0 \
+  | jq -r '.Annotations["io.skillimage.tags"]'
+# → ["example","getting-started"]
+
+# Get lifecycle status
+skopeo inspect docker://quay.io/myorg/hello-world:1.0.0 \
+  | jq -r '.Annotations["io.skillimage.status"]'
+# → published
+```
+
+This works because all skill metadata is stored in OCI manifest
+annotations, not inside the image layers. A catalog UI or CI
+pipeline can read skill metadata with a single manifest fetch.
+
 ## Testing
 
 ```bash
