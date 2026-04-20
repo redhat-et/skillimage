@@ -349,3 +349,88 @@ func TestPromoteInvalidTransition(t *testing.T) {
 		t.Fatal("expected error for invalid transition draft -> published")
 	}
 }
+
+func TestAnnotationsOmittedWhenEmpty(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: minimal-skill
+  namespace: test
+  version: 1.0.0
+  description: Minimal skill with no optional fields.
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/minimal-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.Tags != "" {
+		t.Errorf("tags should be empty, got %q", result.Tags)
+	}
+	if result.Compatibility != "" {
+		t.Errorf("compatibility should be empty, got %q", result.Compatibility)
+	}
+	if result.WordCount != "" {
+		t.Errorf("wordcount should be empty, got %q", result.WordCount)
+	}
+}
+
+func TestAnnotationsEmptySKILLmd(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: empty-md-skill
+  namespace: test
+  version: 1.0.0
+  description: Skill with empty SKILL.md.
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/empty-md-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.WordCount != "" {
+		t.Errorf("wordcount should be empty for empty SKILL.md, got %q", result.WordCount)
+	}
+}
