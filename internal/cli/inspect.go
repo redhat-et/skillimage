@@ -45,6 +45,15 @@ func runInspect(cmd *cobra.Command, ref string) error {
 	if result.License != "" {
 		fmt.Fprintf(out, "License:      %s\n", result.License)
 	}
+	if result.Tags != "" {
+		fmt.Fprintf(out, "Tags:         %s\n", result.Tags)
+	}
+	if result.Compatibility != "" {
+		fmt.Fprintf(out, "Compat:       %s\n", result.Compatibility)
+	}
+	if result.WordCount != "" {
+		fmt.Fprintf(out, "Word Count:   %s\n", result.WordCount)
+	}
 	fmt.Fprintln(out)
 	fmt.Fprintf(out, "OCI Image:\n")
 	fmt.Fprintf(out, "  Digest:     %s\n", result.Digest)
