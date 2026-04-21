@@ -27,6 +27,9 @@ func NewClient(storePath string) (*Client, error) {
 type PackOptions struct {
 	// Tag overrides the default tag. If empty, defaults to <version>-draft.
 	Tag string
+	// MediaType selects the media type profile. Empty or "standard" uses
+	// standard OCI types; "redhat" uses Red Hat-specific types for oc-mirror.
+	MediaType MediaTypeProfile
 }
 
 // PushOptions configures the Push operation.
