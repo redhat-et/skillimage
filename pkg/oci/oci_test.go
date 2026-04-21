@@ -507,19 +507,8 @@ func TestPackRedHatMediaType(t *testing.T) {
 	}
 }
 
-func TestPackInvalidMediaType(t *testing.T) {
-	skillDir := t.TempDir()
-	writeTestSkill(t, skillDir)
-
-	storeDir := t.TempDir()
-	client, err := oci.NewClient(storeDir)
-	if err != nil {
-		t.Fatalf("NewClient: %v", err)
-	}
-
-	_, err = client.Pack(context.Background(), skillDir, oci.PackOptions{
-		MediaType: "bogus",
-	})
+func TestParseMediaTypeProfileRejectsInvalid(t *testing.T) {
+	_, err := oci.ParseMediaTypeProfile("bogus")
 	if err == nil {
 		t.Fatal("expected error for invalid media type profile")
 	}

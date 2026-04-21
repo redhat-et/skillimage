@@ -1,6 +1,9 @@
 package oci
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // MediaTypeProfile selects which set of OCI media types to use when packing
 // skill images. The default (empty string or "standard") uses standard OCI
@@ -18,19 +21,27 @@ const (
 	RedHatMediaTypeSkillConfig = "application/vnd.redhat.agentskill.config.v1+json"
 )
 
+// ParseMediaTypeProfile validates and normalizes a media type profile string.
+func ParseMediaTypeProfile(s string) (MediaTypeProfile, error) {
+	p := MediaTypeProfile(strings.TrimSpace(strings.ToLower(s)))
+	switch p {
+	case "", MediaTypeStandard:
+		return MediaTypeStandard, nil
+	case MediaTypeRedHat:
+		return MediaTypeRedHat, nil
+	default:
+		return "", fmt.Errorf("unknown media type profile: %q (valid: standard, redhat)", s)
+	}
+}
+
 // resolveMediaTypes returns the layer and config media types for the given
 // profile. An empty profile defaults to standard OCI types.
-func resolveMediaTypes(profile MediaTypeProfile) (layer, config string, err error) {
+func resolveMediaTypes(profile MediaTypeProfile) (layer, config string) {
 	switch profile {
-	case "", MediaTypeStandard:
-		return "application/vnd.oci.image.layer.v1.tar+gzip",
-			"application/vnd.oci.image.config.v1+json",
-			nil
 	case MediaTypeRedHat:
-		return RedHatMediaTypeSkillLayer,
-			RedHatMediaTypeSkillConfig,
-			nil
+		return RedHatMediaTypeSkillLayer, RedHatMediaTypeSkillConfig
 	default:
-		return "", "", fmt.Errorf("unknown media type profile: %q (valid: standard, redhat)", profile)
+		return "application/vnd.oci.image.layer.v1.tar+gzip",
+			"application/vnd.oci.image.config.v1+json"
 	}
 }

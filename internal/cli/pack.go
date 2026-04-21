@@ -25,6 +25,11 @@ func newPackCmd() *cobra.Command {
 }
 
 func runPack(cmd *cobra.Command, dir, tag, mediaType string) error {
+	profile, err := oci.ParseMediaTypeProfile(mediaType)
+	if err != nil {
+		return err
+	}
+
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -32,7 +37,7 @@ func runPack(cmd *cobra.Command, dir, tag, mediaType string) error {
 
 	desc, err := client.Pack(context.Background(), dir, oci.PackOptions{
 		Tag:       tag,
-		MediaType: oci.MediaTypeProfile(mediaType),
+		MediaType: profile,
 	})
 	if err != nil {
 		return fmt.Errorf("packing %s: %w", dir, err)

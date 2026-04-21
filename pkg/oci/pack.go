@@ -60,10 +60,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 	}
 
 	// 3. Resolve media types for the selected profile.
-	layerMediaType, configMediaType, err := resolveMediaTypes(opts.MediaType)
-	if err != nil {
-		return ocispec.Descriptor{}, err
-	}
+	layerMediaType, configMediaType := resolveMediaTypes(opts.MediaType)
 
 	// 4. Create a tar.gz layer of all files in the directory.
 	layerBuf, uncompressedDigest, err := createLayer(skillDir)

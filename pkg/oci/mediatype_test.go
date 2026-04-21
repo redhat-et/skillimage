@@ -1,47 +1,78 @@
 package oci
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestResolveMediaTypes(t *testing.T) {
+func TestParseMediaTypeProfile(t *testing.T) {
 	tests := []struct {
-		profile    MediaTypeProfile
-		wantLayer  string
-		wantConfig string
-		wantErr    bool
+		name    string
+		input   string
+		want    MediaTypeProfile
+		wantErr bool
 	}{
-		{
-			profile:    "",
-			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
-			wantConfig: "application/vnd.oci.image.config.v1+json",
-		},
-		{
-			profile:    MediaTypeStandard,
-			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
-			wantConfig: "application/vnd.oci.image.config.v1+json",
-		},
-		{
-			profile:    MediaTypeRedHat,
-			wantLayer:  RedHatMediaTypeSkillLayer,
-			wantConfig: RedHatMediaTypeSkillConfig,
-		},
-		{
-			profile: "invalid",
-			wantErr: true,
-		},
+		{name: "empty", input: "", want: MediaTypeStandard},
+		{name: "standard", input: "standard", want: MediaTypeStandard},
+		{name: "redhat", input: "redhat", want: MediaTypeRedHat},
+		{name: "uppercase", input: "RedHat", want: MediaTypeRedHat},
+		{name: "trailing space", input: "redhat ", want: MediaTypeRedHat},
+		{name: "leading space", input: " standard", want: MediaTypeStandard},
+		{name: "invalid", input: "bogus", wantErr: true},
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.profile), func(t *testing.T) {
-			layer, config, err := resolveMediaTypes(tt.profile)
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseMediaTypeProfile(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
+				}
+				if !strings.Contains(err.Error(), "unknown media type profile") {
+					t.Errorf("error = %q, want it to mention unknown profile", err)
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveMediaTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		profile    MediaTypeProfile
+		wantLayer  string
+		wantConfig string
+	}{
+		{
+			name:       "default",
+			profile:    "",
+			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
+			wantConfig: "application/vnd.oci.image.config.v1+json",
+		},
+		{
+			name:       "standard",
+			profile:    MediaTypeStandard,
+			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
+			wantConfig: "application/vnd.oci.image.config.v1+json",
+		},
+		{
+			name:       "redhat",
+			profile:    MediaTypeRedHat,
+			wantLayer:  RedHatMediaTypeSkillLayer,
+			wantConfig: RedHatMediaTypeSkillConfig,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer, config := resolveMediaTypes(tt.profile)
 			if layer != tt.wantLayer {
 				t.Errorf("layer = %q, want %q", layer, tt.wantLayer)
 			}
