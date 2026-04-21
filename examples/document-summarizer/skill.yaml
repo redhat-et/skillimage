@@ -1,0 +1,30 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: document-summarizer
+  namespace: examples
+  version: 1.0.0
+  display-name: "Document Summarizer"
+  description: >
+    Summarizes technical documents, RFCs, design specs, and
+    long-form content into structured, actionable summaries
+    with key decisions, open questions, and action items.
+  license: Apache-2.0
+  tags:
+    - summarization
+    - documents
+    - productivity
+  compatibility: claude-3.5-sonnet
+  authors:
+    - name: OCTO Team
+      email: octo@redhat.com
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Summarize this design doc for the team standup."
+      output: |
+        **Summary:** Proposes migrating auth from session tokens to
+        short-lived JWTs. **Key decision:** RS256 over HS256 for
+        multi-service verification. **Open questions:** Token
+        refresh strategy for long-running CLI sessions.
+        **Action items:** Security review by Friday.

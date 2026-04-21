@@ -1,0 +1,33 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: document-reviewer
+  namespace: examples
+  version: 1.0.0
+  display-name: "Document Reviewer"
+  description: >
+    Reviews technical documents for clarity, completeness, and
+    consistency. Identifies gaps, ambiguities, and structural
+    issues. Provides actionable feedback organized by severity.
+  license: Apache-2.0
+  tags:
+    - review
+    - documents
+    - writing
+    - quality
+  compatibility: claude-3.5-sonnet
+  authors:
+    - name: OCTO Team
+      email: octo@redhat.com
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Review this API design doc before I send it to the team."
+      output: |
+        **Critical:** The error response schema is undefined for
+        the /users endpoint. Consumers cannot handle failures
+        without this. **Important:** The rate limiting section
+        references "standard limits" without specifying values.
+        **Suggestion:** Add a versioning strategy section -- the
+        doc describes breaking changes but not how clients
+        migrate.
