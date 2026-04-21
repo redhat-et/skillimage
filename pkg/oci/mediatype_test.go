@@ -3,6 +3,8 @@ package oci
 import (
 	"strings"
 	"testing"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestParseMediaTypeProfile(t *testing.T) {
@@ -53,14 +55,14 @@ func TestResolveMediaTypes(t *testing.T) {
 		{
 			name:       "default",
 			profile:    "",
-			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
-			wantConfig: "application/vnd.oci.image.config.v1+json",
+			wantLayer:  ocispec.MediaTypeImageLayerGzip,
+			wantConfig: ocispec.MediaTypeImageConfig,
 		},
 		{
 			name:       "standard",
 			profile:    MediaTypeStandard,
-			wantLayer:  "application/vnd.oci.image.layer.v1.tar+gzip",
-			wantConfig: "application/vnd.oci.image.config.v1+json",
+			wantLayer:  ocispec.MediaTypeImageLayerGzip,
+			wantConfig: ocispec.MediaTypeImageConfig,
 		},
 		{
 			name:       "redhat",

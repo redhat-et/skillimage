@@ -76,21 +76,28 @@ func inspect(ctx context.Context, store inspectableStore, ref string) (*InspectR
 		totalSize += layer.Size
 	}
 
+	var layerMediaType string
+	if len(manifest.Layers) > 0 {
+		layerMediaType = manifest.Layers[0].MediaType
+	}
+
 	return &InspectResult{
-		Name:          name,
-		DisplayName:   displayName,
-		Version:       version,
-		Status:        status,
-		Description:   description,
-		Authors:       authors,
-		License:       license,
-		Tags:          tags,
-		Compatibility: compatibility,
-		WordCount:     wordCount,
-		Digest:        desc.Digest.String(),
-		Created:       created,
-		MediaType:     desc.MediaType,
-		Size:          totalSize,
-		LayerCount:    len(manifest.Layers),
+		Name:            name,
+		DisplayName:     displayName,
+		Version:         version,
+		Status:          status,
+		Description:     description,
+		Authors:         authors,
+		License:         license,
+		Tags:            tags,
+		Compatibility:   compatibility,
+		WordCount:       wordCount,
+		Digest:          desc.Digest.String(),
+		Created:         created,
+		MediaType:       desc.MediaType,
+		ConfigMediaType: manifest.Config.MediaType,
+		LayerMediaType:  layerMediaType,
+		Size:            totalSize,
+		LayerCount:      len(manifest.Layers),
 	}, nil
 }

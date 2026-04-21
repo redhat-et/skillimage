@@ -505,6 +505,12 @@ func TestPackRedHatMediaType(t *testing.T) {
 	if result.MediaType != "application/vnd.oci.image.manifest.v1+json" {
 		t.Errorf("manifest media type = %q, want standard OCI manifest type", result.MediaType)
 	}
+	if result.ConfigMediaType != oci.RedHatMediaTypeSkillConfig {
+		t.Errorf("config media type = %q, want %q", result.ConfigMediaType, oci.RedHatMediaTypeSkillConfig)
+	}
+	if result.LayerMediaType != oci.RedHatMediaTypeSkillLayer {
+		t.Errorf("layer media type = %q, want %q", result.LayerMediaType, oci.RedHatMediaTypeSkillLayer)
+	}
 }
 
 func TestParseMediaTypeProfileRejectsInvalid(t *testing.T) {

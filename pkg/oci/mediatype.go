@@ -3,6 +3,8 @@ package oci
 import (
 	"fmt"
 	"strings"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // MediaTypeProfile selects which set of OCI media types to use when packing
@@ -17,7 +19,7 @@ const (
 )
 
 const (
-	RedHatMediaTypeSkillLayer  = "application/vnd.redhat.agentskill.layer.v1+tar"
+	RedHatMediaTypeSkillLayer  = "application/vnd.redhat.agentskill.layer.v1.tar+gzip"
 	RedHatMediaTypeSkillConfig = "application/vnd.redhat.agentskill.config.v1+json"
 )
 
@@ -41,7 +43,6 @@ func resolveMediaTypes(profile MediaTypeProfile) (layer, config string) {
 	case MediaTypeRedHat:
 		return RedHatMediaTypeSkillLayer, RedHatMediaTypeSkillConfig
 	default:
-		return "application/vnd.oci.image.layer.v1.tar+gzip",
-			"application/vnd.oci.image.config.v1+json"
+		return ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageConfig
 	}
 }

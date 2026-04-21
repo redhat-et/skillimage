@@ -69,7 +69,9 @@ type InspectResult struct {
 	WordCount     string
 	Digest        string
 	Created       string
-	MediaType     string
-	Size          int64
-	LayerCount    int
+	MediaType      string
+	ConfigMediaType string
+	LayerMediaType  string
+	Size           int64
+	LayerCount     int
 }
