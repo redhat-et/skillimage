@@ -135,11 +135,9 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 }
 
 // ListLocal reads the store's tags and returns image metadata from manifest annotations.
-// Deduplicates by digest so that "latest" aliases don't produce duplicate rows.
 func (c *Client) ListLocal() ([]LocalImage, error) {
 	ctx := context.Background()
 	var images []LocalImage
-	seen := make(map[string]bool)
 
 	err := c.store.Tags(ctx, "", func(tags []string) error {
 		for _, tag := range tags {
@@ -147,12 +145,6 @@ func (c *Client) ListLocal() ([]LocalImage, error) {
 			if err != nil {
 				continue
 			}
-
-			digestStr := desc.Digest.String()
-			if seen[digestStr] {
-				continue
-			}
-			seen[digestStr] = true
 
 			img, err := c.imageFromManifest(ctx, tag, desc)
 			if err != nil {
