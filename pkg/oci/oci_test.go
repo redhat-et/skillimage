@@ -394,6 +394,40 @@ spec:
 	}
 }
 
+func TestTag(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	err = client.Tag(ctx, "test/test-skill:1.0.0-draft", "quay.io/myorg/test-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Tag: %v", err)
+	}
+
+	// Inspect via the new tag should return the same image.
+	result, err := client.Inspect(ctx, "quay.io/myorg/test-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect new tag: %v", err)
+	}
+	if result.Version != "1.0.0" {
+		t.Errorf("version = %q, want %q", result.Version, "1.0.0")
+	}
+	if result.Status != "draft" {
+		t.Errorf("status = %q, want %q", result.Status, "draft")
+	}
+}
+
 func TestAnnotationsEmptySKILLmd(t *testing.T) {
 	skillDir := t.TempDir()
 	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
