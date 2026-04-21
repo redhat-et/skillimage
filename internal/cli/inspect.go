@@ -24,7 +24,13 @@ func runInspect(cmd *cobra.Command, ref string) error {
 		return err
 	}
 
-	result, err := client.Inspect(context.Background(), ref)
+	ctx := context.Background()
+
+	// Try local first, fall back to remote.
+	result, err := client.Inspect(ctx, ref)
+	if err != nil {
+		result, err = client.InspectRemote(ctx, ref)
+	}
 	if err != nil {
 		return fmt.Errorf("inspecting %s: %w", ref, err)
 	}
