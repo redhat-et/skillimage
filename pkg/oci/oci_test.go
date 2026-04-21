@@ -327,6 +327,55 @@ spec:
 	}
 }
 
+func TestWordCountExcludesFrontmatter(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: frontmatter-skill
+  namespace: test
+  version: 1.0.0
+  description: Skill with YAML frontmatter in SKILL.md.
+spec:
+  prompt: SKILL.md
+`)
+	skillMD := []byte(`---
+name: frontmatter-skill
+description: This has frontmatter that should not be counted.
+license: Apache-2.0
+---
+
+These five words are counted.
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), skillMD, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/frontmatter-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.WordCount != "5" {
+		t.Errorf("wordcount = %q, want %q (frontmatter should be excluded)", result.WordCount, "5")
+	}
+}
+
 func TestPromoteInvalidTransition(t *testing.T) {
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)

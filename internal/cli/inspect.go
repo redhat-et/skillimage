@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -27,12 +28,13 @@ func runInspect(cmd *cobra.Command, ref string) error {
 	ctx := context.Background()
 
 	// Try local first, fall back to remote.
-	result, err := client.Inspect(ctx, ref)
-	if err != nil {
-		result, err = client.InspectRemote(ctx, ref)
-	}
-	if err != nil {
-		return fmt.Errorf("inspecting %s: %w", ref, err)
+	result, localErr := client.Inspect(ctx, ref)
+	if localErr != nil {
+		var remoteErr error
+		result, remoteErr = client.InspectRemote(ctx, ref)
+		if remoteErr != nil {
+			return fmt.Errorf("inspecting %s: %w", ref, errors.Join(localErr, remoteErr))
+		}
 	}
 
 	out := cmd.OutOrStdout()

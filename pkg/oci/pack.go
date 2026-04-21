@@ -52,11 +52,11 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		return ocispec.Descriptor{}, fmt.Errorf("skill.yaml validation failed: %s", strings.Join(msgs, "; "))
 	}
 
-	// 2b. Count words in SKILL.md if present.
+	// 2b. Count words in SKILL.md if present, excluding YAML frontmatter.
 	var wordCount int
 	skillMDPath := filepath.Join(skillDir, "SKILL.md")
 	if data, err := os.ReadFile(skillMDPath); err == nil {
-		wordCount = len(strings.Fields(string(data)))
+		wordCount = len(strings.Fields(stripFrontmatter(string(data))))
 	}
 
 	// 3. Create a tar.gz layer of all files in the directory.
@@ -136,7 +136,14 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 
 // ListLocal reads the store's tags and returns image metadata from manifest annotations.
 func (c *Client) ListLocal() ([]LocalImage, error) {
-	ctx := context.Background()
+	images, err := c.listLocal(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("listing tags: %w", err)
+	}
+	return images, nil
+}
+
+func (c *Client) listLocal(ctx context.Context) ([]LocalImage, error) {
 	var images []LocalImage
 
 	err := c.store.Tags(ctx, "", func(tags []string) error {
@@ -155,7 +162,7 @@ func (c *Client) ListLocal() ([]LocalImage, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("listing tags: %w", err)
+		return nil, err
 	}
 
 	return images, nil
@@ -297,6 +304,21 @@ func copyFileToTar(tw *tar.Writer, path, rel string) error {
 		return fmt.Errorf("copying %s: %w", rel, err)
 	}
 	return nil
+}
+
+// stripFrontmatter removes YAML frontmatter (delimited by "---") from
+// SKILL.md content so that metadata fields don't inflate the word count.
+func stripFrontmatter(s string) string {
+	if !strings.HasPrefix(s, "---") {
+		return s
+	}
+	end := strings.Index(s[3:], "\n---")
+	if end < 0 {
+		return s
+	}
+	// Skip past the closing "---" and its newline.
+	body := s[3+end+4:]
+	return body
 }
 
 // buildImageConfig creates the OCI image config JSON (FROM scratch equivalent).
