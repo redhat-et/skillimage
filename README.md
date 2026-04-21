@@ -20,13 +20,52 @@ ORAS artifacts. This means:
 - Standard registries (Quay, GHCR, Zot) index and serve them normally
 - Signing and verification via cosign/sigstore (planned)
 
-## Quick start
+## Install
 
-### Build
+### Homebrew (macOS / Linux)
 
 ```bash
-make build
+brew install pavelanni/tap/skillctl
 ```
+
+### Install script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh
+```
+
+To install a specific version or to a custom directory:
+
+```bash
+VERSION=0.1.0 INSTALL_DIR=~/.local/bin curl -fsSL \
+  https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh
+```
+
+### Go install
+
+```bash
+go install github.com/redhat-et/skillimage/cmd/skillctl@latest
+```
+
+### Container image
+
+```bash
+podman run --rm ghcr.io/redhat-et/skillctl:latest version
+```
+
+### From source
+
+```bash
+make build    # produces bin/skillctl
+```
+
+### GitHub releases
+
+Pre-built binaries for Linux, macOS, and Windows (amd64/arm64)
+are available on the
+[releases page](https://github.com/redhat-et/skillimage/releases).
+
+## Quick start
 
 ### Create a skill
 
