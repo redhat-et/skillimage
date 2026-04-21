@@ -82,6 +82,7 @@ func credentialStore() (credentials.Store, error) {
 
 	podmanStore, err := credentials.NewStore(podmanPath, credentials.StoreOptions{})
 	if err != nil {
+		// Podman config unreadable but Docker config works — fall back gracefully.
 		return dockerStore, nil
 	}
 

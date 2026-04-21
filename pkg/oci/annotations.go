@@ -83,7 +83,7 @@ func buildAnnotations(sc *skillcard.SkillCard, wordCount int) map[string]string 
 	// Lifecycle status: initial state is always draft.
 	ann[lifecycle.StatusAnnotation] = string(lifecycle.Draft)
 
-	// Tags: JSON-encoded string array.
+	// Tags: JSON-encoded string array. Marshal of []string cannot fail in practice.
 	if len(sc.Metadata.Tags) > 0 {
 		tagsJSON, err := json.Marshal(sc.Metadata.Tags)
 		if err == nil {
