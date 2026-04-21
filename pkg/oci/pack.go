@@ -59,17 +59,20 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		wordCount = len(strings.Fields(stripFrontmatter(string(data))))
 	}
 
-	// 3. Create a tar.gz layer of all files in the directory.
+	// 3. Resolve media types for the selected profile.
+	layerMediaType, configMediaType := resolveMediaTypes(opts.MediaType)
+
+	// 4. Create a tar.gz layer of all files in the directory.
 	layerBuf, uncompressedDigest, err := createLayer(skillDir)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("creating layer: %w", err)
 	}
 
-	// 4. Push the layer blob to the store.
+	// 5. Push the layer blob to the store.
 	layerBytes := layerBuf.Bytes()
 	layerDigest := godigest.FromBytes(layerBytes)
 	layerDesc := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageLayerGzip,
+		MediaType: layerMediaType,
 		Digest:    layerDigest,
 		Size:      int64(len(layerBytes)),
 	}
@@ -77,14 +80,14 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		return ocispec.Descriptor{}, fmt.Errorf("pushing layer: %w", err)
 	}
 
-	// 5. Create and push the OCI image config.
+	// 6. Create and push the OCI image config.
 	configBytes, err := buildImageConfig(uncompressedDigest)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("building image config: %w", err)
 	}
 	configDigest := godigest.FromBytes(configBytes)
 	configDesc := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageConfig,
+		MediaType: configMediaType,
 		Digest:    configDigest,
 		Size:      int64(len(configBytes)),
 	}
@@ -92,10 +95,10 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		return ocispec.Descriptor{}, fmt.Errorf("pushing config: %w", err)
 	}
 
-	// 6. Build annotations from SkillCard.
+	// 7. Build annotations from SkillCard.
 	annotations := buildAnnotations(sc, wordCount)
 
-	// 7. Create and push the OCI manifest.
+	// 8. Create and push the OCI manifest.
 	manifest := ocispec.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		MediaType: ocispec.MediaTypeImageManifest,
@@ -121,7 +124,7 @@ func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (o
 		return ocispec.Descriptor{}, fmt.Errorf("pushing manifest: %w", err)
 	}
 
-	// 8. Tag as namespace/name:tag.
+	// 9. Tag as namespace/name:tag.
 	tag := opts.Tag
 	if tag == "" {
 		tag = lifecycle.TagForState(sc.Metadata.Version, lifecycle.Draft)

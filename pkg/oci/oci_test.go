@@ -477,6 +477,49 @@ func TestTag(t *testing.T) {
 	}
 }
 
+func TestPackRedHatMediaType(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	desc, err := client.Pack(ctx, skillDir, oci.PackOptions{
+		MediaType: oci.MediaTypeRedHat,
+	})
+	if err != nil {
+		t.Fatalf("Pack with redhat media type: %v", err)
+	}
+	if desc.Digest.String() == "" {
+		t.Error("expected non-empty digest")
+	}
+
+	result, err := client.Inspect(ctx, "test/test-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+	if result.MediaType != "application/vnd.oci.image.manifest.v1+json" {
+		t.Errorf("manifest media type = %q, want standard OCI manifest type", result.MediaType)
+	}
+	if result.ConfigMediaType != oci.RedHatMediaTypeSkillConfig {
+		t.Errorf("config media type = %q, want %q", result.ConfigMediaType, oci.RedHatMediaTypeSkillConfig)
+	}
+	if result.LayerMediaType != oci.RedHatMediaTypeSkillLayer {
+		t.Errorf("layer media type = %q, want %q", result.LayerMediaType, oci.RedHatMediaTypeSkillLayer)
+	}
+}
+
+func TestParseMediaTypeProfileRejectsInvalid(t *testing.T) {
+	_, err := oci.ParseMediaTypeProfile("bogus")
+	if err == nil {
+		t.Fatal("expected error for invalid media type profile")
+	}
+}
+
 func TestAnnotationsEmptySKILLmd(t *testing.T) {
 	skillDir := t.TempDir()
 	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
