@@ -54,16 +54,19 @@ type PromoteOptions struct{}
 
 // InspectResult holds detailed metadata for a skill image.
 type InspectResult struct {
-	Name        string
-	DisplayName string
-	Version     string
-	Status      string
-	Description string
-	Authors     string
-	License     string
-	Digest      string
-	Created     string
-	MediaType   string
-	Size        int64
-	LayerCount  int
+	Name          string
+	DisplayName   string
+	Version       string
+	Status        string
+	Description   string
+	Authors       string
+	License       string
+	Tags          string
+	Compatibility string
+	WordCount     string
+	Digest        string
+	Created       string
+	MediaType     string
+	Size          int64
+	LayerCount    int
 }

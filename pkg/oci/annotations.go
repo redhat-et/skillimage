@@ -1,7 +1,9 @@
 package oci
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -12,9 +14,16 @@ import (
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
+// Custom annotation keys for catalog metadata.
+const (
+	AnnotationTags          = "io.skillimage.tags"
+	AnnotationCompatibility = "io.skillimage.compatibility"
+	AnnotationWordCount     = "io.skillimage.wordcount"
+)
+
 // buildAnnotations maps SkillCard fields to standard OCI annotation keys
 // and the custom skillimage status annotation.
-func buildAnnotations(sc *skillcard.SkillCard) map[string]string {
+func buildAnnotations(sc *skillcard.SkillCard, wordCount int) map[string]string {
 	ann := make(map[string]string)
 
 	// Title: use display-name if set, otherwise name.
@@ -73,6 +82,24 @@ func buildAnnotations(sc *skillcard.SkillCard) map[string]string {
 
 	// Lifecycle status: initial state is always draft.
 	ann[lifecycle.StatusAnnotation] = string(lifecycle.Draft)
+
+	// Tags: JSON-encoded string array. Marshal of []string cannot fail in practice.
+	if len(sc.Metadata.Tags) > 0 {
+		tagsJSON, err := json.Marshal(sc.Metadata.Tags)
+		if err == nil {
+			ann[AnnotationTags] = string(tagsJSON)
+		}
+	}
+
+	// Compatibility.
+	if sc.Metadata.Compatibility != "" {
+		ann[AnnotationCompatibility] = sc.Metadata.Compatibility
+	}
+
+	// Word count of SKILL.md.
+	if wordCount > 0 {
+		ann[AnnotationWordCount] = strconv.Itoa(wordCount)
+	}
 
 	return ann
 }

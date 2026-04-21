@@ -276,6 +276,106 @@ func TestPromoteLocal(t *testing.T) {
 	}
 }
 
+func TestAnnotationsIncludeTags(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: annotated-skill
+  namespace: test
+  version: 2.0.0
+  description: Skill with tags and compat.
+  tags:
+    - kubernetes
+    - debugging
+  compatibility: claude-3.5-sonnet
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("one two three four five"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/annotated-skill:2.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.Tags != `["kubernetes","debugging"]` {
+		t.Errorf("tags = %q, want %q", result.Tags, `["kubernetes","debugging"]`)
+	}
+	if result.Compatibility != "claude-3.5-sonnet" {
+		t.Errorf("compatibility = %q, want %q", result.Compatibility, "claude-3.5-sonnet")
+	}
+	if result.WordCount != "5" {
+		t.Errorf("wordcount = %q, want %q", result.WordCount, "5")
+	}
+}
+
+func TestWordCountExcludesFrontmatter(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: frontmatter-skill
+  namespace: test
+  version: 1.0.0
+  description: Skill with YAML frontmatter in SKILL.md.
+spec:
+  prompt: SKILL.md
+`)
+	skillMD := []byte(`---
+name: frontmatter-skill
+description: This has frontmatter that should not be counted.
+license: Apache-2.0
+---
+
+These five words are counted.
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), skillMD, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/frontmatter-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.WordCount != "5" {
+		t.Errorf("wordcount = %q, want %q (frontmatter should be excluded)", result.WordCount, "5")
+	}
+}
+
 func TestPromoteInvalidTransition(t *testing.T) {
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)
@@ -296,5 +396,124 @@ func TestPromoteInvalidTransition(t *testing.T) {
 	err = client.PromoteLocal(ctx, "test/test-skill:1.0.0-draft", lifecycle.Published)
 	if err == nil {
 		t.Fatal("expected error for invalid transition draft -> published")
+	}
+}
+
+func TestAnnotationsOmittedWhenEmpty(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: minimal-skill
+  namespace: test
+  version: 1.0.0
+  description: Minimal skill with no optional fields.
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/minimal-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.Tags != "" {
+		t.Errorf("tags should be empty, got %q", result.Tags)
+	}
+	if result.Compatibility != "" {
+		t.Errorf("compatibility should be empty, got %q", result.Compatibility)
+	}
+	if result.WordCount != "" {
+		t.Errorf("wordcount should be empty, got %q", result.WordCount)
+	}
+}
+
+func TestTag(t *testing.T) {
+	skillDir := t.TempDir()
+	writeTestSkill(t, skillDir)
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	err = client.Tag(ctx, "test/test-skill:1.0.0-draft", "quay.io/myorg/test-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Tag: %v", err)
+	}
+
+	// Inspect via the new tag should return the same image.
+	result, err := client.Inspect(ctx, "quay.io/myorg/test-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect new tag: %v", err)
+	}
+	if result.Version != "1.0.0" {
+		t.Errorf("version = %q, want %q", result.Version, "1.0.0")
+	}
+	if result.Status != "draft" {
+		t.Errorf("status = %q, want %q", result.Status, "draft")
+	}
+}
+
+func TestAnnotationsEmptySKILLmd(t *testing.T) {
+	skillDir := t.TempDir()
+	skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: empty-md-skill
+  namespace: test
+  version: 1.0.0
+  description: Skill with empty SKILL.md.
+spec:
+  prompt: SKILL.md
+`)
+	if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx := context.Background()
+	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	if err != nil {
+		t.Fatalf("Pack: %v", err)
+	}
+
+	result, err := client.Inspect(ctx, "test/empty-md-skill:1.0.0-draft")
+	if err != nil {
+		t.Fatalf("Inspect: %v", err)
+	}
+
+	if result.WordCount != "" {
+		t.Errorf("wordcount should be empty for empty SKILL.md, got %q", result.WordCount)
 	}
 }

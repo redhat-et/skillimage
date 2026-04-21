@@ -11,16 +11,33 @@ import (
 	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
-// Inspect retrieves detailed metadata for a skill image stored in the local OCI layout.
+// inspectableStore is the minimal interface for reading a manifest.
+type inspectableStore interface {
+	Resolve(ctx context.Context, ref string) (ocispec.Descriptor, error)
+	Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error)
+}
+
+// Inspect retrieves detailed metadata for a skill image in the local store.
 func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error) {
-	// Resolve the reference to get the manifest descriptor.
-	desc, err := c.store.Resolve(ctx, ref)
+	return inspect(ctx, c.store, ref)
+}
+
+// InspectRemote retrieves detailed metadata for a skill image on a remote registry.
+func (c *Client) InspectRemote(ctx context.Context, ref string) (*InspectResult, error) {
+	repo, err := newRemoteRepository(ref)
+	if err != nil {
+		return nil, fmt.Errorf("creating remote repository: %w", err)
+	}
+	return inspect(ctx, repo, ref)
+}
+
+func inspect(ctx context.Context, store inspectableStore, ref string) (*InspectResult, error) {
+	desc, err := store.Resolve(ctx, ref)
 	if err != nil {
 		return nil, fmt.Errorf("resolving %s: %w", ref, err)
 	}
 
-	// Fetch and parse the manifest.
-	rc, err := c.store.Fetch(ctx, desc)
+	rc, err := store.Fetch(ctx, desc)
 	if err != nil {
 		return nil, fmt.Errorf("fetching manifest: %w", err)
 	}
@@ -41,10 +58,8 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 		ann = make(map[string]string)
 	}
 
-	// Extract name from ref (everything before the last colon).
 	name := parseNameFromTag(ref)
 
-	// Extract annotations.
 	version := ann[ocispec.AnnotationVersion]
 	status := ann[lifecycle.StatusAnnotation]
 	description := ann[ocispec.AnnotationDescription]
@@ -52,25 +67,30 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 	authors := ann[ocispec.AnnotationAuthors]
 	license := ann[ocispec.AnnotationLicenses]
 	created := ann[ocispec.AnnotationCreated]
+	tags := ann[AnnotationTags]
+	compatibility := ann[AnnotationCompatibility]
+	wordCount := ann[AnnotationWordCount]
 
-	// Compute total size from layers.
 	var totalSize int64
 	for _, layer := range manifest.Layers {
 		totalSize += layer.Size
 	}
 
 	return &InspectResult{
-		Name:        name,
-		DisplayName: displayName,
-		Version:     version,
-		Status:      status,
-		Description: description,
-		Authors:     authors,
-		License:     license,
-		Digest:      desc.Digest.String(),
-		Created:     created,
-		MediaType:   desc.MediaType,
-		Size:        totalSize,
-		LayerCount:  len(manifest.Layers),
+		Name:          name,
+		DisplayName:   displayName,
+		Version:       version,
+		Status:        status,
+		Description:   description,
+		Authors:       authors,
+		License:       license,
+		Tags:          tags,
+		Compatibility: compatibility,
+		WordCount:     wordCount,
+		Digest:        desc.Digest.String(),
+		Created:       created,
+		MediaType:     desc.MediaType,
+		Size:          totalSize,
+		LayerCount:    len(manifest.Layers),
 	}, nil
 }

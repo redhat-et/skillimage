@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -24,9 +25,16 @@ func runInspect(cmd *cobra.Command, ref string) error {
 		return err
 	}
 
-	result, err := client.Inspect(context.Background(), ref)
-	if err != nil {
-		return fmt.Errorf("inspecting %s: %w", ref, err)
+	ctx := context.Background()
+
+	// Try local first, fall back to remote.
+	result, localErr := client.Inspect(ctx, ref)
+	if localErr != nil {
+		var remoteErr error
+		result, remoteErr = client.InspectRemote(ctx, ref)
+		if remoteErr != nil {
+			return fmt.Errorf("inspecting %s: %w", ref, errors.Join(localErr, remoteErr))
+		}
 	}
 
 	out := cmd.OutOrStdout()
@@ -44,6 +52,15 @@ func runInspect(cmd *cobra.Command, ref string) error {
 	}
 	if result.License != "" {
 		fmt.Fprintf(out, "License:      %s\n", result.License)
+	}
+	if result.Tags != "" {
+		fmt.Fprintf(out, "Tags:         %s\n", result.Tags)
+	}
+	if result.Compatibility != "" {
+		fmt.Fprintf(out, "Compat:       %s\n", result.Compatibility)
+	}
+	if result.WordCount != "" {
+		fmt.Fprintf(out, "Word Count:   %s\n", result.WordCount)
 	}
 	fmt.Fprintln(out)
 	fmt.Fprintf(out, "OCI Image:\n")
