@@ -1601,7 +1601,7 @@ section.thankyou {
 <li><img class="emoji" draggable="false" alt="🔀" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.2/assets/svg/1f500.svg" data-marp-twemoji=""/> <strong>Review the PR:</strong> design decisions, media types, and annotation schema are documented in the design spec — feedback welcome</li>
 <li><img class="emoji" draggable="false" alt="🤝" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.2/assets/svg/1f91d.svg" data-marp-twemoji=""/> <strong>Community:</strong> should we propose SkillCard alignment to the Agent Skills OCI Artifacts Specification?</li>
 <li><img class="emoji" draggable="false" alt="🔏" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.2/assets/svg/1f50f.svg" data-marp-twemoji=""/> <strong>Next milestone:</strong> full sigstore integration for keyless skill signing and verification</li>
-<li><img class="emoji" draggable="false" alt="🏢" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.2/assets/svg/1f3e2.svg" data-marp-twemoji=""/> <strong>OpenShift alignment:</strong> OCPSTRAT-3122 is building platform-side support — oc-mirror, OLM integration, admission control</li>
+<li><img class="emoji" draggable="false" alt="🏢" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.2/assets/svg/1f3e2.svg" data-marp-twemoji=""/> <strong>OpenShift alignment:</strong> the platform team is building support for oc-mirror, OLM integration, and admission control</li>
 </ul>
 <p><span class="tag-accent">github.com/redhat-et/docsclaw</span></p>
 </section>
@@ -1764,7 +1764,7 @@ cache across pod restarts and avoid filling node ephemeral storage.
 Signature verification happens at pull time: --verify + --key flags enforce cosign
 verification before extracting the skill.</p></div><div class="bespoke-marp-note" data-index="10" tabindex="0"><p>The before/after contrast highlights what OCI distribution adds to the picture. All the
 &quot;after&quot; properties come for free from the OCI ecosystem — registries, sigstore, RBAC,
-pull policies — we're just reusing existing infrastructure.</p></div><div class="bespoke-marp-note" data-index="11" tabindex="0"><p>OCPSTRAT-3122 covers this from the platform side. The oc-mirror tool needs a
+pull policies — we're just reusing existing infrastructure.</p></div><div class="bespoke-marp-note" data-index="11" tabindex="0"><p>The OpenShift platform team is also building support for this. The oc-mirror tool needs a
 recognizable MIME type (application/vnd.redhat.agentskill.layer.v1+tar) to
 identify skill artifacts for mirroring. skillctl supports this as an optional
 media type alongside the standard OCI types.
@@ -1786,9 +1786,7 @@ or separate artifact.
 
 Ann Marie Fred (OpenShift AI) noted that coding assistants can't natively load OCI
 artifacts yet. Multiple consumption paths lower the barrier to adoption.</p></div><div class="bespoke-marp-note" data-index="13" tabindex="0"><p>Resources:
-- OCPSTRAT-3122: Agent skill packaging for OpenShift (Jira)
-- OCPSTRAT-3118: Shipping Agent skills for OLM-managed operators
-- OCPSTRAT-3119: Automatic agent skill discovery and registration
+- OpenShift platform: agent skill packaging, OLM operator integration, skill discovery
 - PR #21: github.com/redhat-et/docsclaw/pull/21
 - Design spec: docs/dev/2026-04-12-oci-skill-distribution-design.md
 - OCI skills guide: docs/oci-skills-guide.md

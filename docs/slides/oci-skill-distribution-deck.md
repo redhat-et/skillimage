@@ -438,7 +438,7 @@ Connected                              Disconnected
 - **Signature preservation** — cosign signatures survive the mirror, verified at admission
 
 <!--
-OCPSTRAT-3122 covers this from the platform side. The oc-mirror tool needs a
+The OpenShift platform team is also building support for this. The oc-mirror tool needs a
 recognizable MIME type (application/vnd.redhat.agentskill.layer.v1+tar) to
 identify skill artifacts for mirroring. skillctl supports this as an optional
 media type alongside the standard OCI types.
@@ -495,15 +495,13 @@ artifacts yet. Multiple consumption paths lower the barrier to adoption.
 - 🔀 **Review the PR:** design decisions, media types, and annotation schema are documented in the design spec — feedback welcome
 - 🤝 **Community:** should we propose SkillCard alignment to the Agent Skills OCI Artifacts Specification?
 - 🔏 **Next milestone:** full sigstore integration for keyless skill signing and verification
-- 🏢 **OpenShift alignment:** OCPSTRAT-3122 is building platform-side support — oc-mirror, OLM integration, admission control
+- 🏢 **OpenShift alignment:** the platform team is building support for oc-mirror, OLM integration, and admission control
 
 <span class="tag-accent">github.com/redhat-et/docsclaw</span>
 
 <!--
 Resources:
-- OCPSTRAT-3122: Agent skill packaging for OpenShift (Jira)
-- OCPSTRAT-3118: Shipping Agent skills for OLM-managed operators
-- OCPSTRAT-3119: Automatic agent skill discovery and registration
+- OpenShift platform: agent skill packaging, OLM operator integration, skill discovery
 - PR #21: github.com/redhat-et/docsclaw/pull/21
 - Design spec: docs/dev/2026-04-12-oci-skill-distribution-design.md
 - OCI skills guide: docs/oci-skills-guide.md
