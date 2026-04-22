@@ -1,5 +1,460 @@
 <!DOCTYPE html>
-<html>
-<head><meta http-equiv="refresh" content="0;url=slides/skillimage-deck.html"></head>
-<body><a href="slides/skillimage-deck.html">View presentation</a></body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>skillctl — OCI-Based Skill Distribution</title>
+  <meta name="description" content="Package, sign, and distribute AI agent skills as OCI images. Enterprise-grade supply chain for agent skills.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-primary: #000000;
+      --bg-secondary: #1f1f1f;
+      --bg-surface: #292929;
+      --text-primary: #ffffff;
+      --text-secondary: #c7c7c7;
+      --text-muted: #a3a3a3;
+      --accent: #ee0000;
+      --accent-dark: #a60000;
+      --accent-light: #f56e6e;
+      --border: #383838;
+      --font-display: 'Red Hat Display', sans-serif;
+      --font-body: 'Red Hat Text', sans-serif;
+      --font-mono: 'Red Hat Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* === HERO === */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 64px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; z-index: 1; }
+
+    .hero-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      max-width: 800px;
+    }
+    .hero .subtitle {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .accent { color: var(--accent); }
+
+    /* === INSTALL === */
+    .install-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 16px 24px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .install-block .prompt { color: var(--accent-light); user-select: none; }
+    .install-block code { flex: 1; }
+    .install-block .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .install-block .copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* === BUTTONS === */
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 3px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn:hover { text-decoration: none; }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--text-primary);
+    }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--text-muted); }
+
+    /* === TAGS === */
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      display: inline-block;
+      padding: 4px 16px;
+      border: 1px solid var(--border);
+      border-radius: 64px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .tag-accent { border-color: var(--accent); color: var(--accent); }
+
+    /* === SECTIONS === */
+    section {
+      padding: 80px 64px;
+      border-top: 1px solid var(--border);
+    }
+    section h2 {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+    }
+
+    /* === FEATURES GRID === */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+    }
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 24px;
+    }
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* === CODE EXAMPLE === */
+    .code-section { max-width: 800px; }
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 24px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      overflow-x: auto;
+    }
+    .code-block .cmd { color: var(--accent-light); }
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .output { color: var(--text-muted); font-style: italic; }
+
+    /* === INSTALL OPTIONS === */
+    .install-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+    }
+    .install-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 24px;
+    }
+    .install-card h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .install-card pre {
+      background: var(--bg-surface);
+      border-radius: 3px;
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent-light);
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+
+    /* === PRESENTATIONS === */
+    .presentations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+      max-width: 1100px;
+    }
+    .pres-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 32px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s;
+      display: block;
+    }
+    .pres-card:hover { border-color: var(--accent); text-decoration: none; }
+    .pres-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    .pres-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .pres-card .pres-meta {
+      margin-top: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* === FOOTER === */
+    footer {
+      padding: 40px 64px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    footer .copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    footer .links {
+      display: flex;
+      gap: 24px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .hero { padding: 48px 24px; min-height: auto; }
+      section { padding: 48px 24px; }
+      footer { padding: 24px; }
+      .features, .install-grid, .presentations {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">skillctl &middot; v0.1.0</div>
+    <h1>AI Agent Skills as <span class="accent">OCI Images</span></h1>
+    <p class="subtitle">Package, sign, and distribute agent skills using the same registries and trust chains you already run for container images. Enterprise-grade supply chain for the age of AI agents.</p>
+
+    <div class="install-block">
+      <span class="prompt">$</span>
+      <code id="install-cmd">brew install pavelanni/tap/skillctl</code>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('install-cmd').textContent);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+    </div>
+
+    <div class="buttons">
+      <a href="https://github.com/redhat-et/skillimage" class="btn btn-primary">GitHub</a>
+      <a href="#install" class="btn btn-outline">Install</a>
+      <a href="#presentations" class="btn btn-outline">Presentations</a>
+    </div>
+
+    <div class="tags">
+      <span class="tag tag-accent">OCI Images</span>
+      <span class="tag">ORAS</span>
+      <span class="tag">Sigstore</span>
+      <span class="tag">Image Volumes</span>
+      <span class="tag">Agent Skills Spec</span>
+    </div>
+  </div>
+
+  <!-- WHY -->
+  <section>
+    <h2>Why <span class="accent">OCI</span> for Agent Skills?</h2>
+    <div class="features">
+      <div class="feature-card">
+        <h3>Standard Tooling</h3>
+        <p>Skills are standard OCI images. <code>podman pull</code>, <code>skopeo copy</code>, <code>crane pull</code> all work out of the box. No new infrastructure to deploy.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Supply Chain Security</h3>
+        <p>Sign skills with cosign/sigstore. Verify at pull time or via Kubernetes admission controllers. Full provenance and audit trail from your existing registry.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Kubernetes Native</h3>
+        <p>Mount skills directly into agent pods via ImageVolumes (K8s 1.33+ / OpenShift 4.20+). Read-only, cached by the kubelet, no init container needed.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Lifecycle Management</h3>
+        <p>Draft, testing, published, deprecated, archived. Semantic versioning with immutable digests. Promote without modifying content.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Air-Gapped Ready</h3>
+        <p>Skills mirror to disconnected registries with oc-mirror. Optional Red Hat media types let the tooling identify skill artifacts automatically.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Framework Agnostic</h3>
+        <p>Works with any agent runtime that reads the Agent Skills spec. Claude Code, OpenAI Agents, LangChain, custom frameworks. Skills are just files.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKFLOW -->
+  <section>
+    <h2>The Workflow: <span class="accent">Pack, Push, Mount</span></h2>
+    <div class="code-section">
+      <div class="code-block">
+        <span class="comment"># Pack a skill directory into a local OCI image</span><br>
+        <span class="cmd">$ skillctl pack</span> examples/skills/resume-screener<br>
+        <span class="output">Packed &rarr; oci-layout &middot; sha256:65af81ce... &middot; 1226 bytes</span><br><br>
+
+        <span class="comment"># Push to any OCI registry</span><br>
+        <span class="cmd">$ skillctl push</span> quay.io/myorg/skill-resume-screener:1.0.0<br>
+        <span class="output">Pushed &rarr; quay.io/myorg/skill-resume-screener:1.0.0</span><br><br>
+
+        <span class="comment"># Inspect metadata remotely (no download)</span><br>
+        <span class="cmd">$ skillctl inspect</span> quay.io/myorg/skill-resume-screener:1.0.0<br>
+        <span class="output">Name: resume-screener &middot; Version: 1.0.0 &middot; Status: published</span><br><br>
+
+        <span class="comment"># Pull and install for your agent</span><br>
+        <span class="cmd">$ skillctl pull</span> -o ~/.claude/skills quay.io/myorg/skill-resume-screener:1.0.0<br>
+        <span class="output">Pulled &rarr; ~/.claude/skills/resume-screener/</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section id="install">
+    <h2>Install <span class="accent">skillctl</span></h2>
+    <div class="install-grid">
+      <div class="install-card">
+        <h3>Homebrew</h3>
+        <pre>brew install pavelanni/tap/skillctl</pre>
+      </div>
+      <div class="install-card">
+        <h3>Install Script</h3>
+        <pre>curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh</pre>
+      </div>
+      <div class="install-card">
+        <h3>Go Install</h3>
+        <pre>go install github.com/redhat-et/skillimage/cmd/skillctl@latest</pre>
+      </div>
+      <div class="install-card">
+        <h3>Container</h3>
+        <pre>podman run --rm ghcr.io/redhat-et/skillctl:latest version</pre>
+      </div>
+      <div class="install-card">
+        <h3>GitHub Releases</h3>
+        <p style="font-size: 0.9rem; color: var(--text-secondary);">Pre-built binaries for Linux, macOS, and Windows (amd64/arm64) on the <a href="https://github.com/redhat-et/skillimage/releases">releases page</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRESENTATIONS -->
+  <section id="presentations">
+    <h2><span class="accent">Presentations</span></h2>
+    <div class="presentations">
+      <a href="slides/oci-skill-distribution-deck.html" class="pres-card">
+        <h3>Distributing AI Skills at Enterprise Scale</h3>
+        <p>OCI-based skill distribution: packaging, signing, air-gapped support, and Kubernetes integration. Covers OCPSTRAT-3122 alignment.</p>
+        <div class="pres-meta">15 slides &middot; April 2026</div>
+      </a>
+      <a href="slides/skillimage-deck.html" class="pres-card">
+        <h3>skillctl &mdash; OCI Skill Registry</h3>
+        <p>Project overview: architecture, lifecycle management, SkillCard metadata, and the library-first design of skillctl.</p>
+        <div class="pres-meta">Slide Deck &middot; April 2026</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="copyright">Pavel Anni &middot; Office of CTO &middot; Red Hat</div>
+    <div class="links">
+      <a href="https://github.com/redhat-et/skillimage">GitHub</a>
+      <a href="https://github.com/redhat-et/skillimage/releases">Releases</a>
+      <a href="https://agentskills.io">Agent Skills Spec</a>
+    </div>
+  </footer>
+
+</body>
 </html>
