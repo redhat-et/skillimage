@@ -44,8 +44,34 @@ INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
+CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${TAG}/checksums.txt"
+
 echo "Downloading ${BINARY} ${VERSION} for ${OS}/${ARCH}..."
 curl -fsSL -o "${TMPDIR}/${ARCHIVE}" "$URL"
+curl -fsSL -o "${TMPDIR}/checksums.txt" "$CHECKSUMS_URL"
+
+echo "Verifying checksum..."
+EXPECTED=$(grep "${ARCHIVE}" "${TMPDIR}/checksums.txt" | awk '{print $1}')
+if [ -z "$EXPECTED" ]; then
+  echo "Error: no checksum found for ${ARCHIVE}" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "${TMPDIR}/${ARCHIVE}" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  ACTUAL=$(shasum -a 256 "${TMPDIR}/${ARCHIVE}" | awk '{print $1}')
+else
+  echo "Error: no sha256sum or shasum found" >&2
+  exit 1
+fi
+
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "Error: checksum mismatch" >&2
+  echo "  expected: $EXPECTED" >&2
+  echo "  actual:   $ACTUAL" >&2
+  exit 1
+fi
 
 echo "Extracting..."
 tar -xzf "${TMPDIR}/${ARCHIVE}" -C "$TMPDIR"
@@ -53,11 +79,11 @@ tar -xzf "${TMPDIR}/${ARCHIVE}" -C "$TMPDIR"
 echo "Installing to ${INSTALL_DIR}/${BINARY}..."
 if [ -w "$INSTALL_DIR" ]; then
   mv "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+  chmod +x "${INSTALL_DIR}/${BINARY}"
 else
   sudo mv "${TMPDIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
+  sudo chmod +x "${INSTALL_DIR}/${BINARY}"
 fi
-
-chmod +x "${INSTALL_DIR}/${BINARY}"
 
 echo "Installed ${BINARY} ${VERSION} to ${INSTALL_DIR}/${BINARY}"
 "${INSTALL_DIR}/${BINARY}" version 2>/dev/null || true

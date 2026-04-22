@@ -37,8 +37,8 @@ curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.s
 To install a specific version or to a custom directory:
 
 ```bash
-VERSION=0.1.0 INSTALL_DIR=~/.local/bin curl -fsSL \
-  https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh \
+  | VERSION=0.1.0 INSTALL_DIR=~/.local/bin sh
 ```
 
 ### Go install
