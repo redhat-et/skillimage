@@ -1,0 +1,51 @@
+# skillctl
+
+> Package, sign, and distribute AI agent skills as OCI images.
+
+skillctl is a CLI tool and Go library for treating AI agent skills exactly like container images. Skills are directories containing a SKILL.md (instructions) and skill.yaml (metadata), packaged as standard OCI images and distributed via any OCI registry.
+
+## Key Links
+
+- [GitHub Repository](https://github.com/redhat-et/skillimage)
+- [Releases](https://github.com/redhat-et/skillimage/releases)
+- [Full Documentation](https://skillimage.dev/llms-full.txt)
+- [Agent Skills Specification](https://agentskills.io)
+
+## Install
+
+- Homebrew: `brew install pavelanni/tap/skillctl`
+- Go: `go install github.com/redhat-et/skillimage/cmd/skillctl@latest`
+- Script: `curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh`
+- Container: `podman run --rm ghcr.io/redhat-et/skillctl:latest`
+
+## CLI Commands
+
+- `skillctl pack <dir>` — package a skill directory into a local OCI image
+- `skillctl push <ref>` — push a skill image to a remote registry
+- `skillctl pull <ref> -o <dir>` — pull and unpack a skill from a registry
+- `skillctl inspect <ref>` — show skill metadata (works locally and remotely)
+- `skillctl validate <dir>` — validate skill.yaml against the JSON Schema
+- `skillctl list` — list locally packed skill images
+- `skillctl promote <ref> --to <state>` — promote lifecycle state (draft -> testing -> published)
+- `skillctl tag <src> <dst>` — add an additional tag to a local image
+
+## Core Concepts
+
+- **SkillCard** (skill.yaml): machine-readable metadata — name, version, namespace, description, author, license, tools, resource hints
+- **Lifecycle**: draft -> testing -> published -> deprecated -> archived, stored in OCI manifest annotations
+- **Media types**: standard OCI types by default; `--media-type redhat` for oc-mirror compatibility in air-gapped environments
+- **Image volumes**: mount skills directly into K8s pods (K8s 1.33+ / OpenShift 4.20+)
+
+## Go Library
+
+Module: `github.com/redhat-et/skillimage`
+
+Key packages:
+- `pkg/oci` — Pack, Push, Pull, Inspect, Promote operations
+- `pkg/skillcard` — Parse, validate, serialize SkillCard
+- `pkg/lifecycle` — State machine, semver tag rules
+- `pkg/verify` — Sigstore signature verification
+
+## License
+
+Apache-2.0

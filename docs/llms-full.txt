@@ -1,0 +1,361 @@
+# skillctl — Full Reference
+
+> Package, sign, and distribute AI agent skills as OCI images.
+
+skillctl is a CLI tool and Go library for treating AI agent skills exactly like container images. Skills are directories containing a SKILL.md (instructions) and skill.yaml (metadata), packaged as standard OCI images and distributed via any OCI registry (Quay, GHCR, Harbor, Zot).
+
+Project: https://github.com/redhat-et/skillimage
+Author: Pavel Anni, Office of CTO, Red Hat
+License: Apache-2.0
+
+---
+
+## Install
+
+Homebrew (macOS / Linux):
+```
+brew install pavelanni/tap/skillctl
+```
+
+Install script:
+```
+curl -fsSL https://raw.githubusercontent.com/redhat-et/skillimage/main/install.sh | sh
+```
+
+Go install:
+```
+go install github.com/redhat-et/skillimage/cmd/skillctl@latest
+```
+
+Container:
+```
+podman run --rm ghcr.io/redhat-et/skillctl:latest version
+```
+
+Pre-built binaries: https://github.com/redhat-et/skillimage/releases
+
+---
+
+## What is a Skill?
+
+A skill is a directory following the Agent Skills specification (agentskills.io). It contains:
+
+- **SKILL.md** — instructions the agent follows (prompt content)
+- **skill.yaml** — structured metadata (SkillCard)
+- Any supporting files (templates, examples, scripts)
+
+Example directory:
+```
+resume-screener/
+  SKILL.md
+  skill.yaml
+```
+
+---
+
+## SkillCard (skill.yaml)
+
+The SkillCard is the machine-readable identity of a skill:
+
+```yaml
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: resume-screener
+  namespace: official
+  version: 1.0.0
+  description: Screen resumes against a job description.
+  authors:
+    - name: Red Hat ET
+      email: et@redhat.com
+  license: Apache-2.0
+  tags:
+    - hr
+    - screening
+  compatibility: claude-3.5-sonnet
+spec:
+  prompt: SKILL.md
+  tools:
+    - read_file
+  resources:
+    memory: 32Mi
+    cpu: 100m
+```
+
+Fields:
+- `name`: lowercase alphanumeric with hyphens
+- `namespace`: organizational scope (e.g. "official", "community")
+- `version`: semantic version (major.minor.patch)
+- `description`: free-text description (first 256 chars stored in OCI annotations)
+- `authors`: list of {name, email} pairs
+- `license`: SPDX identifier
+- `tags`: searchable labels
+- `compatibility`: target agent/model
+- `tools`: list of tools the skill requires
+- `resources`: CPU and memory hints for deployment
+
+---
+
+## CLI Reference
+
+### skillctl pack
+
+Package a skill directory into a local OCI image.
+
+```
+skillctl pack <dir> [--tag <tag>] [--media-type <profile>]
+```
+
+- `--tag`: override the default tag (default: `<version>-draft`)
+- `--media-type`: "standard" (default) or "redhat" (for oc-mirror compatibility)
+
+The skill directory must contain a valid skill.yaml. The resulting image is stored in a local OCI layout at `~/.skillctl/store/`.
+
+### skillctl push
+
+Push a local skill image to a remote OCI registry.
+
+```
+skillctl push <ref>
+```
+
+The ref is a full OCI reference: `registry/namespace/name:tag`. Uses existing podman/docker credentials from `~/.docker/config.json` or Podman's `auth.json`.
+
+### skillctl pull
+
+Pull a skill image from a remote registry.
+
+```
+skillctl pull <ref> [-o <dir>]
+```
+
+- `-o`: unpack skill files into the specified directory (creates a subdirectory named after the skill)
+
+### skillctl inspect
+
+Show detailed metadata for a skill image.
+
+```
+skillctl inspect <ref>
+```
+
+Works with both local refs (e.g. `test/my-skill:1.0.0-draft`) and remote refs (e.g. `quay.io/org/skill:1.0.0`). Remote inspect reads OCI manifest annotations without downloading the image layers.
+
+Output includes: name, version, status, description, authors, license, tags, compatibility, word count, digest, media type, layer count.
+
+### skillctl validate
+
+Validate a skill.yaml against the JSON Schema.
+
+```
+skillctl validate <dir>
+```
+
+### skillctl list
+
+List all skill images in the local store.
+
+```
+skillctl list
+```
+
+### skillctl promote
+
+Promote a skill through lifecycle states.
+
+```
+skillctl promote <ref> --to <state> --local
+```
+
+Valid transitions: draft -> testing -> published -> deprecated -> archived.
+
+Promotion updates the `io.skillimage.status` annotation and retags the image. Image content (layers) is never modified.
+
+### skillctl tag
+
+Add a new tag to an existing local image.
+
+```
+skillctl tag <src> <dst>
+```
+
+Useful for preparing images for push: `skillctl tag ns/name:1.0.0-draft quay.io/org/name:1.0.0-draft`.
+
+---
+
+## Lifecycle States
+
+```
+draft -> testing -> published -> deprecated -> archived
+```
+
+| State | OCI Tag | Example |
+|-------|---------|---------|
+| draft | `<ver>-draft` | `1.0.0-draft` |
+| testing | `<ver>-testing` | `1.0.0-testing` |
+| published | `<ver>` + `latest` | `1.0.0` |
+| deprecated | `<ver>` | `1.0.0` |
+| archived | tag removed | digest only |
+
+Status is stored in OCI manifest annotation `io.skillimage.status`. Image content is immutable across all promotions — only annotations and tags change.
+
+---
+
+## OCI Architecture
+
+Skills are packaged as standard OCI images (FROM scratch), not ORAS artifacts. This means:
+
+- `podman pull` / `skopeo copy` / `crane pull` work out of the box
+- Kubernetes ImageVolumes can mount skills directly into pods
+- Standard registries index and serve them normally
+- cosign/sigstore signing works the same as for container images
+
+### Image Structure
+
+- **Layer**: single tar.gz containing all skill files
+- **Config**: OCI image config with rootfs and diff_ids
+- **Manifest**: OCI image manifest with SkillCard metadata in annotations
+
+### Media Types
+
+Default (standard):
+- Layer: `application/vnd.oci.image.layer.v1.tar+gzip`
+- Config: `application/vnd.oci.image.config.v1+json`
+- Manifest: `application/vnd.oci.image.manifest.v1+json`
+
+Red Hat profile (`--media-type redhat`):
+- Layer: `application/vnd.redhat.agentskill.layer.v1.tar+gzip`
+- Config: `application/vnd.redhat.agentskill.config.v1+json`
+- Manifest: `application/vnd.oci.image.manifest.v1+json` (unchanged)
+
+The Red Hat profile enables oc-mirror to identify skill artifacts for disconnected/air-gapped mirroring.
+
+### OCI Annotations
+
+Standard OCI annotations used:
+- `org.opencontainers.image.title` — skill display name
+- `org.opencontainers.image.description` — first 256 chars of description
+- `org.opencontainers.image.version` — semantic version
+- `org.opencontainers.image.authors` — comma-separated authors
+- `org.opencontainers.image.licenses` — SPDX license
+- `org.opencontainers.image.vendor` — namespace
+- `org.opencontainers.image.created` — RFC 3339 timestamp
+- `org.opencontainers.image.source` — source repository URL
+- `org.opencontainers.image.revision` — git commit
+
+Custom annotations:
+- `io.skillimage.status` — lifecycle state
+- `io.skillimage.tags` — JSON array of searchable tags
+- `io.skillimage.compatibility` — target agent/model
+- `io.skillimage.wordcount` — word count of SKILL.md (excluding frontmatter)
+
+---
+
+## Kubernetes Deployment
+
+### Image Volumes (K8s 1.33+ / OpenShift 4.20+)
+
+```yaml
+volumes:
+  - name: skill-resume-screener
+    image:
+      reference: quay.io/org/skill-resume-screener:1.0.0
+      pullPolicy: IfNotPresent
+
+containers:
+  - name: agent
+    volumeMounts:
+      - name: skill-resume-screener
+        mountPath: /skills/resume-screener
+```
+
+The kubelet pulls and caches the image. Read-only mount, no init container needed.
+
+### Init Container (older clusters)
+
+```yaml
+initContainers:
+  - name: skill-puller
+    image: ghcr.io/redhat-et/skillctl:latest
+    command: ["skillctl", "pull", "--verify", "-o", "/skills",
+              "quay.io/org/skill-resume-screener:1.0.0"]
+    volumeMounts:
+      - name: skills
+        mountPath: /skills
+```
+
+---
+
+## Go Library
+
+Module path: `github.com/redhat-et/skillimage`
+
+### Package: pkg/oci
+
+Core OCI operations.
+
+```go
+client, _ := oci.NewClient("/path/to/store")
+
+// Pack
+desc, _ := client.Pack(ctx, "path/to/skill/", oci.PackOptions{
+    Tag:       "1.0.0",
+    MediaType: oci.MediaTypeStandard,
+})
+
+// Push to remote
+client.Push(ctx, "quay.io/org/skill:1.0.0", oci.PushOptions{})
+
+// Pull from remote
+client.Pull(ctx, "quay.io/org/skill:1.0.0", oci.PullOptions{
+    OutputDir: "/skills",
+})
+
+// Inspect (local or remote)
+result, _ := client.Inspect(ctx, "ns/name:tag")
+result, _ := client.InspectRemote(ctx, "quay.io/org/skill:1.0.0")
+```
+
+### Package: pkg/skillcard
+
+Parse and validate SkillCard files.
+
+```go
+f, _ := os.Open("skill.yaml")
+sc, _ := skillcard.Parse(f)
+errors, _ := skillcard.Validate(sc)
+```
+
+### Package: pkg/lifecycle
+
+State machine for lifecycle transitions.
+
+```go
+lifecycle.ValidTransition(lifecycle.Draft, lifecycle.Testing)    // true
+lifecycle.ValidTransition(lifecycle.Draft, lifecycle.Published)  // false
+lifecycle.TagForState("1.0.0", lifecycle.Draft)                  // "1.0.0-draft"
+```
+
+---
+
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `cmd/skillctl/` | CLI entry point |
+| `internal/cli/` | Cobra commands |
+| `pkg/oci/` | OCI pack/push/pull/inspect/promote |
+| `pkg/skillcard/` | SkillCard parse, validate, serialize |
+| `pkg/lifecycle/` | State machine, tag rules |
+| `pkg/verify/` | Sigstore signature verification |
+| `schemas/` | JSON Schema for SkillCard |
+| `examples/` | Sample skills |
+
+---
+
+## Related Projects
+
+- [Agent Skills Specification](https://agentskills.io) — the standard for skill directories
+- [agentoperations/agent-registry](https://github.com/agentoperations/agent-registry) — metadata and governance layer (companion project)
+- [ORAS](https://oras.land) — OCI Registry As Storage
+- [Zot](https://zotregistry.dev) — lightweight OCI registry for testing
