@@ -47,3 +47,41 @@ release:
   github:
     owner: redhat-et
     name: skillimage
+
+brews:
+  - name: skillctl
+    repository:
+      owner: pavelanni
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/redhat-et/skillimage
+    description: Pack, push, pull, and inspect AI agent skills as OCI images
+    license: Apache-2.0
+    install: |
+      bin.install "skillctl"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    goarch: amd64
+  - image_templates:
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-arm64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/redhat-et/skillctl:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-amd64"
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/redhat-et/skillctl:latest"
+    image_templates:
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-amd64"
+      - "ghcr.io/redhat-et/skillctl:{{ .Version }}-arm64"
