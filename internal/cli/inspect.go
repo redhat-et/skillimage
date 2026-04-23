@@ -6,20 +6,25 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func newInspectCmd() *cobra.Command {
-	return &cobra.Command{
+	var tlsVerify bool
+	cmd := &cobra.Command{
 		Use:   "inspect <ref>",
 		Short: "Show SkillCard metadata and OCI image details",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInspect(cmd, args[0])
+			return runInspect(cmd, args[0], !tlsVerify)
 		},
 	}
+	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
+	return cmd
 }
 
-func runInspect(cmd *cobra.Command, ref string) error {
+func runInspect(cmd *cobra.Command, ref string, skipTLSVerify bool) error {
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -31,7 +36,7 @@ func runInspect(cmd *cobra.Command, ref string) error {
 	result, localErr := client.Inspect(ctx, ref)
 	if localErr != nil {
 		var remoteErr error
-		result, remoteErr = client.InspectRemote(ctx, ref)
+		result, remoteErr = client.InspectRemote(ctx, ref, oci.InspectOptions{SkipTLSVerify: skipTLSVerify})
 		if remoteErr != nil {
 			return fmt.Errorf("inspecting %s: %w", ref, errors.Join(localErr, remoteErr))
 		}

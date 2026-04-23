@@ -34,8 +34,8 @@ func (c *Client) PromoteLocal(ctx context.Context, ref string, to lifecycle.Stat
 
 // Promote promotes a skill on a remote registry by transitioning it
 // from its current lifecycle state to the target state.
-func (c *Client) Promote(ctx context.Context, ref string, to lifecycle.State, _ PromoteOptions) error {
-	repo, err := newRemoteRepository(ref)
+func (c *Client) Promote(ctx context.Context, ref string, to lifecycle.State, opts PromoteOptions) error {
+	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
 		return fmt.Errorf("creating remote repository: %w", err)
 	}

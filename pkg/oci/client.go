@@ -33,13 +33,20 @@ type PackOptions struct {
 }
 
 // PushOptions configures the Push operation.
-type PushOptions struct{}
+type PushOptions struct {
+	// SkipTLSVerify disables TLS certificate verification for the
+	// remote registry (equivalent to --tls-verify=false).
+	SkipTLSVerify bool
+}
 
 // PullOptions configures the Pull operation.
 type PullOptions struct {
 	// OutputDir, if set, causes the pulled image to be unpacked into this
 	// directory after storing it locally.
 	OutputDir string
+	// SkipTLSVerify disables TLS certificate verification for the
+	// remote registry (equivalent to --tls-verify=false).
+	SkipTLSVerify bool
 }
 
 // LocalImage holds metadata for an image stored in the local OCI layout.
@@ -53,7 +60,18 @@ type LocalImage struct {
 }
 
 // PromoteOptions configures the Promote operation.
-type PromoteOptions struct{}
+type PromoteOptions struct {
+	// SkipTLSVerify disables TLS certificate verification for the
+	// remote registry (equivalent to --tls-verify=false).
+	SkipTLSVerify bool
+}
+
+// InspectOptions configures the InspectRemote operation.
+type InspectOptions struct {
+	// SkipTLSVerify disables TLS certificate verification for the
+	// remote registry (equivalent to --tls-verify=false).
+	SkipTLSVerify bool
+}
 
 // InspectResult holds detailed metadata for a skill image.
 type InspectResult struct {

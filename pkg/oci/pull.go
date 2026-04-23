@@ -18,7 +18,7 @@ import (
 // Pull copies an image from a remote registry into the local store.
 // If opts.OutputDir is set, the image is also unpacked into that directory.
 func (c *Client) Pull(ctx context.Context, ref string, opts PullOptions) (ocispec.Descriptor, error) {
-	repo, err := newRemoteRepository(ref)
+	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("creating remote repository: %w", err)
 	}
@@ -86,12 +86,12 @@ func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error
 // skillNameFromRef extracts the skill name from a reference like
 // "namespace/name:tag" -- it returns "name".
 func skillNameFromRef(ref string) string {
-	// Strip tag.
 	name := ref
-	if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		name = ref[:idx]
+	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
 		name = ref[:idx]
 	}
-	// Take the last path segment.
 	if idx := strings.LastIndex(name, "/"); idx >= 0 {
 		name = name[idx+1:]
 	}

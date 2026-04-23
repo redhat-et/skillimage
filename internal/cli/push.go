@@ -9,7 +9,8 @@ import (
 )
 
 func newPushCmd() *cobra.Command {
-	return &cobra.Command{
+	var tlsVerify bool
+	cmd := &cobra.Command{
 		Use:   "push <ref>",
 		Short: "Push a skill image from local store to a remote registry",
 		Long: `Push a skill image to a remote OCI registry.
@@ -18,18 +19,20 @@ The ref should be a full OCI reference: registry/namespace/name:tag
 Example: quay.io/acme/hr-onboarding:1.0.0-draft`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPush(cmd, args[0])
+			return runPush(cmd, args[0], !tlsVerify)
 		},
 	}
+	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
+	return cmd
 }
 
-func runPush(cmd *cobra.Command, ref string) error {
+func runPush(cmd *cobra.Command, ref string, skipTLSVerify bool) error {
 	client, err := defaultClient()
 	if err != nil {
 		return err
 	}
 
-	if err := client.Push(context.Background(), ref, oci.PushOptions{}); err != nil {
+	if err := client.Push(context.Background(), ref, oci.PushOptions{SkipTLSVerify: skipTLSVerify}); err != nil {
 		return fmt.Errorf("pushing: %w", err)
 	}
 

@@ -13,6 +13,7 @@ import (
 func newPromoteCmd() *cobra.Command {
 	var toState string
 	var local bool
+	var tlsVerify bool
 	cmd := &cobra.Command{
 		Use:   "promote <ref>",
 		Short: "Promote a skill to the next lifecycle state",
@@ -28,16 +29,17 @@ Examples:
   skillctl promote test/test-skill:1.0.0-draft --to testing --local`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPromote(cmd, args[0], toState, local)
+			return runPromote(cmd, args[0], toState, local, !tlsVerify)
 		},
 	}
 	cmd.Flags().StringVar(&toState, "to", "", "target lifecycle state (required)")
 	_ = cmd.MarkFlagRequired("to")
 	cmd.Flags().BoolVar(&local, "local", false, "promote in local store instead of remote registry")
+	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
 	return cmd
 }
 
-func runPromote(cmd *cobra.Command, ref, toState string, local bool) error {
+func runPromote(cmd *cobra.Command, ref, toState string, local bool, skipTLSVerify bool) error {
 	to, err := lifecycle.ParseState(toState)
 	if err != nil {
 		return fmt.Errorf("invalid target state: %w", err)
@@ -55,7 +57,7 @@ func runPromote(cmd *cobra.Command, ref, toState string, local bool) error {
 			return fmt.Errorf("promoting %s: %w", ref, err)
 		}
 	} else {
-		if err := client.Promote(ctx, ref, to, oci.PromoteOptions{}); err != nil {
+		if err := client.Promote(ctx, ref, to, oci.PromoteOptions{SkipTLSVerify: skipTLSVerify}); err != nil {
 			return fmt.Errorf("promoting %s: %w", ref, err)
 		}
 	}

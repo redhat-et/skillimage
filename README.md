@@ -85,6 +85,12 @@ spec:
   prompt: SKILL.md
 ```
 
+The `namespace` field groups skills locally. When you run
+`skillctl list`, skills display as `namespace/name` (e.g.,
+`examples/hello-world`). The namespace is a logical grouping
+within the skill card and is independent of the remote registry
+path.
+
 ### Validate, pack, and inspect
 
 ```bash
@@ -125,6 +131,12 @@ bin/skillctl push quay.io/myorg/hello-world:1.0.0-draft
 bin/skillctl pull quay.io/myorg/hello-world:1.0.0 -o ./skills/
 ```
 
+We recommend aligning the remote registry path with the skill's
+`namespace` field. For example, a skill with `namespace: business`
+would push to `quay.io/myorg/business/hello-world:1.0.0-draft`.
+This is a convention, not enforced by skillctl, but it makes it
+easier to find skills in both local and remote listings.
+
 Authentication uses your existing `~/.docker/config.json` or
 Podman's `auth.json` -- no separate login needed.
 
@@ -151,6 +163,32 @@ skopeo inspect docker://quay.io/myorg/hello-world:1.0.0 \
 This works because all skill metadata is stored in OCI manifest
 annotations, not inside the image layers. A catalog UI or CI
 pipeline can read skill metadata with a single manifest fetch.
+
+### Running skillctl on OpenShift
+
+You can run skillctl directly on an OpenShift cluster to inspect
+images in the internal registry. First, create a secret with your
+registry credentials:
+
+```bash
+oc create secret docker-registry skillctl-auth \
+  --docker-server=image-registry.openshift-image-registry.svc:5000 \
+  --docker-username=unused \
+  --docker-password="$(oc whoami -t)"
+```
+
+Then run skillctl as a pod with the secret mounted:
+
+```bash
+oc run skillctl --rm -i --restart=Never \
+  --image=ghcr.io/redhat-et/skillctl:latest \
+  --overrides='{"spec":{"containers":[{"name":"skillctl","image":"ghcr.io/redhat-et/skillctl:latest","args":["inspect","--tls-verify=false","image-registry.openshift-image-registry.svc:5000/NAMESPACE/SKILL@sha256:DIGEST"],"volumeMounts":[{"name":"auth","mountPath":"/home/skillctl/.docker"}]}],"volumes":[{"name":"auth","secret":{"secretName":"skillctl-auth","items":[{"key":".dockerconfigjson","path":"config.json"}]}}]}}'
+```
+
+Use `--tls-verify=false` for the internal registry (self-signed
+certificate). The `-i` flag ensures `--rm` cleans up the pod
+after it completes. The token from `oc whoami -t` is typically
+valid for 24 hours; recreate the secret when it expires.
 
 ## Testing
 
