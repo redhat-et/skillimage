@@ -66,6 +66,13 @@ type PromoteOptions struct {
 	SkipTLSVerify bool
 }
 
+// InspectOptions configures the InspectRemote operation.
+type InspectOptions struct {
+	// SkipTLSVerify disables TLS certificate verification for the
+	// remote registry (equivalent to --tls-verify=false).
+	SkipTLSVerify bool
+}
+
 // InspectResult holds detailed metadata for a skill image.
 type InspectResult struct {
 	Name          string

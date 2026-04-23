@@ -18,11 +18,13 @@ func TestSplitRefTag(t *testing.T) {
 		{"name", "name", ""},
 	}
 	for _, tt := range tests {
-		repo, tag := splitRefTag(tt.ref)
-		if repo != tt.wantRepo || tag != tt.wantTag {
-			t.Errorf("splitRefTag(%q) = (%q, %q), want (%q, %q)",
-				tt.ref, repo, tag, tt.wantRepo, tt.wantTag)
-		}
+		t.Run(tt.ref, func(t *testing.T) {
+			repo, tag := splitRefTag(tt.ref)
+			if repo != tt.wantRepo || tag != tt.wantTag {
+				t.Errorf("splitRefTag(%q) = (%q, %q), want (%q, %q)",
+					tt.ref, repo, tag, tt.wantRepo, tt.wantTag)
+			}
+		})
 	}
 }
 
@@ -38,10 +40,12 @@ func TestParseNameFromTag(t *testing.T) {
 		{"name", "name"},
 	}
 	for _, tt := range tests {
-		got := parseNameFromTag(tt.ref)
-		if got != tt.want {
-			t.Errorf("parseNameFromTag(%q) = %q, want %q", tt.ref, got, tt.want)
-		}
+		t.Run(tt.ref, func(t *testing.T) {
+			got := parseNameFromTag(tt.ref)
+			if got != tt.want {
+				t.Errorf("parseNameFromTag(%q) = %q, want %q", tt.ref, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -58,9 +62,11 @@ func TestSkillNameFromRef(t *testing.T) {
 		{"name", "name"},
 	}
 	for _, tt := range tests {
-		got := skillNameFromRef(tt.ref)
-		if got != tt.want {
-			t.Errorf("skillNameFromRef(%q) = %q, want %q", tt.ref, got, tt.want)
-		}
+		t.Run(tt.ref, func(t *testing.T) {
+			got := skillNameFromRef(tt.ref)
+			if got != tt.want {
+				t.Errorf("skillNameFromRef(%q) = %q, want %q", tt.ref, got, tt.want)
+			}
+		})
 	}
 }

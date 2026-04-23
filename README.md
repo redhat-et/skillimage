@@ -180,14 +180,15 @@ oc create secret docker-registry skillctl-auth \
 Then run skillctl as a pod with the secret mounted:
 
 ```bash
-oc run skillctl --rm --restart=Never \
+oc run skillctl --rm -i --restart=Never \
   --image=ghcr.io/redhat-et/skillctl:latest \
   --overrides='{"spec":{"containers":[{"name":"skillctl","image":"ghcr.io/redhat-et/skillctl:latest","args":["inspect","--tls-verify=false","image-registry.openshift-image-registry.svc:5000/NAMESPACE/SKILL@sha256:DIGEST"],"volumeMounts":[{"name":"auth","mountPath":"/home/skillctl/.docker"}]}],"volumes":[{"name":"auth","secret":{"secretName":"skillctl-auth","items":[{"key":".dockerconfigjson","path":"config.json"}]}}]}}'
 ```
 
 Use `--tls-verify=false` for the internal registry (self-signed
-certificate). The token from `oc whoami -t` is short-lived;
-recreate the secret when it expires.
+certificate). The `-i` flag ensures `--rm` cleans up the pod
+after it completes. The token from `oc whoami -t` is typically
+valid for 24 hours; recreate the secret when it expires.
 
 ## Testing
 

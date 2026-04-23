@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func newInspectCmd() *cobra.Command {
@@ -34,7 +36,7 @@ func runInspect(cmd *cobra.Command, ref string, skipTLSVerify bool) error {
 	result, localErr := client.Inspect(ctx, ref)
 	if localErr != nil {
 		var remoteErr error
-		result, remoteErr = client.InspectRemote(ctx, ref, skipTLSVerify)
+		result, remoteErr = client.InspectRemote(ctx, ref, oci.InspectOptions{SkipTLSVerify: skipTLSVerify})
 		if remoteErr != nil {
 			return fmt.Errorf("inspecting %s: %w", ref, errors.Join(localErr, remoteErr))
 		}

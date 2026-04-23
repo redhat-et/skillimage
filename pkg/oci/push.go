@@ -64,7 +64,7 @@ func newRemoteRepository(ref string, skipTLSVerify bool) (*remote.Repository, er
 	if skipTLSVerify {
 		authClient.Client = &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // user-requested via --tls-verify=false
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}, //nolint:gosec // user-requested via --tls-verify=false
 			},
 		}
 	}
