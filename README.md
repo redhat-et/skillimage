@@ -246,6 +246,17 @@ Status is stored in OCI manifest annotations
 (`io.skillimage.status`), not inside the image. Image content
 is immutable across promotions.
 
+## Similar projects
+
+Several projects explore packaging AI agent skills as OCI
+artifacts. We share the same vision and welcome collaboration.
+
+| Project | Author | Approach |
+| ------- | ------ | -------- |
+| [Agent Skills OCI Artifacts Spec](https://github.com/ThomasVitale/agents-skills-oci-artifacts-spec) | Thomas Vitale | Specification for skills as ORAS artifacts with Arconia CLI |
+| [skills-oci](https://github.com/salaboy/skills-oci) | Mauricio Salatino | CLI for skills as OCI artifacts with SLSA provenance and SBOMs |
+| **skillctl** (this project) | Red Hat OCTO | Skills as OCI images for multi-user OpenShift/K8s with lifecycle management, read-only ImageVolume mounting, and standard container tooling |
+
 ## License
 
 Apache-2.0
