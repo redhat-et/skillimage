@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt clean
+.PHONY: build test lint fmt clean image
 
 BINARY := skillctl
 BINDIR := bin
@@ -14,6 +14,9 @@ lint:
 
 fmt:
 	gofumpt -l -w .
+
+image:
+	podman -c rhel build -f Dockerfile.local -t ghcr.io/redhat-et/skillctl:latest .
 
 clean:
 	rm -rf $(BINDIR)
