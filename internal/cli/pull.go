@@ -11,6 +11,7 @@ import (
 
 func newPullCmd() *cobra.Command {
 	var outputDir string
+	var tlsVerify bool
 	cmd := &cobra.Command{
 		Use:   "pull <ref>",
 		Short: "Pull a skill image from a remote registry",
@@ -25,10 +26,11 @@ Examples:
   skillctl pull quay.io/acme/hr-onboarding:1.0.0 -o ./skills/`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPull(cmd, args[0], outputDir)
+			return runPull(cmd, args[0], outputDir, !tlsVerify)
 		},
 	}
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "unpack skill files to directory")
+	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
 	return cmd
 }
 
@@ -36,7 +38,7 @@ func looksLocal(ref string) bool {
 	return !strings.Contains(ref, "/")
 }
 
-func runPull(cmd *cobra.Command, ref string, outputDir string) error {
+func runPull(cmd *cobra.Command, ref string, outputDir string, skipTLSVerify bool) error {
 	if looksLocal(ref) {
 		return fmt.Errorf("%s looks like a local reference, not a remote registry\n\nTo install from the local store, use:\n  skillctl install %s --target <agent>\n  skillctl install %s -o <directory>", ref, ref, ref)
 	}
@@ -47,7 +49,8 @@ func runPull(cmd *cobra.Command, ref string, outputDir string) error {
 	}
 
 	desc, err := client.Pull(context.Background(), ref, oci.PullOptions{
-		OutputDir: outputDir,
+		OutputDir:     outputDir,
+		SkipTLSVerify: skipTLSVerify,
 	})
 	if err != nil {
 		return fmt.Errorf("pulling: %w", err)

@@ -212,6 +212,9 @@ func (c *Client) imageFromManifest(ctx context.Context, tag string, desc ocispec
 // parseNameFromTag extracts the "namespace/name" portion from a tag reference
 // like "namespace/name:tag".
 func parseNameFromTag(ref string) string {
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		return ref[:idx]
+	}
 	if idx := strings.LastIndex(ref, ":"); idx >= 0 {
 		return ref[:idx]
 	}

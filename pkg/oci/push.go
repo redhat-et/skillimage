@@ -2,7 +2,9 @@ package oci
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,8 +16,8 @@ import (
 )
 
 // Push copies an image from the local OCI store to a remote registry.
-func (c *Client) Push(ctx context.Context, ref string, _ PushOptions) error {
-	repo, err := newRemoteRepository(ref)
+func (c *Client) Push(ctx context.Context, ref string, opts PushOptions) error {
+	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
 		return fmt.Errorf("creating remote repository: %w", err)
 	}
@@ -44,7 +46,7 @@ func (c *Client) CopyTo(ctx context.Context, ref string, dst *Client) error {
 // newRemoteRepository creates a remote.Repository from a full reference string
 // like "registry.example.com/namespace/name:tag", configured with credentials
 // from Docker and Podman auth files.
-func newRemoteRepository(ref string) (*remote.Repository, error) {
+func newRemoteRepository(ref string, skipTLSVerify bool) (*remote.Repository, error) {
 	repoRef, _ := splitRefTag(ref)
 	repo, err := remote.NewRepository(repoRef)
 	if err != nil {
@@ -56,9 +58,17 @@ func newRemoteRepository(ref string) (*remote.Repository, error) {
 		return nil, fmt.Errorf("loading credentials: %w", err)
 	}
 
-	repo.Client = &auth.Client{
+	authClient := &auth.Client{
 		Credential: credentials.Credential(store),
 	}
+	if skipTLSVerify {
+		authClient.Client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // user-requested via --tls-verify=false
+			},
+		}
+	}
+	repo.Client = authClient
 
 	return repo, nil
 }
@@ -100,21 +110,29 @@ func podmanAuthPath() string {
 	return filepath.Join(home, ".config", "containers", "auth.json")
 }
 
-// splitRefTag splits an OCI reference into repository and tag.
+// splitRefTag splits an OCI reference into repository and tag/digest.
 // Handles registry ports correctly: localhost:5000/ns/name:tag splits
 // at the tag colon (after the last /), not the port colon.
+// Digest references (name@sha256:abc) split at the @ and return the
+// full digest (sha256:abc) as the tag.
 func splitRefTag(ref string) (repo, tag string) {
-	// Find the last slash to isolate the name:tag portion.
+	// Find the last slash to isolate the name portion.
 	lastSlash := strings.LastIndex(ref, "/")
 	if lastSlash < 0 {
-		// No slash: the whole ref might be name:tag.
+		if idx := strings.Index(ref, "@"); idx >= 0 {
+			return ref[:idx], ref[idx+1:]
+		}
 		if idx := strings.LastIndex(ref, ":"); idx >= 0 {
 			return ref[:idx], ref[idx+1:]
 		}
 		return ref, ""
 	}
-	// Look for a colon only after the last slash.
 	tail := ref[lastSlash+1:]
+	// Digest reference: name@sha256:abc...
+	if idx := strings.Index(tail, "@"); idx >= 0 {
+		return ref[:lastSlash+1+idx], tail[idx+1:]
+	}
+	// Tag reference: name:tag
 	if idx := strings.LastIndex(tail, ":"); idx >= 0 {
 		return ref[:lastSlash+1+idx], tail[idx+1:]
 	}

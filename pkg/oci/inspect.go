@@ -23,8 +23,8 @@ func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error
 }
 
 // InspectRemote retrieves detailed metadata for a skill image on a remote registry.
-func (c *Client) InspectRemote(ctx context.Context, ref string) (*InspectResult, error) {
-	repo, err := newRemoteRepository(ref)
+func (c *Client) InspectRemote(ctx context.Context, ref string, skipTLSVerify bool) (*InspectResult, error) {
+	repo, err := newRemoteRepository(ref, skipTLSVerify)
 	if err != nil {
 		return nil, fmt.Errorf("creating remote repository: %w", err)
 	}

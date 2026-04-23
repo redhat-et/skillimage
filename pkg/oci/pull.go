@@ -18,7 +18,7 @@ import (
 // Pull copies an image from a remote registry into the local store.
 // If opts.OutputDir is set, the image is also unpacked into that directory.
 func (c *Client) Pull(ctx context.Context, ref string, opts PullOptions) (ocispec.Descriptor, error) {
-	repo, err := newRemoteRepository(ref)
+	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("creating remote repository: %w", err)
 	}
