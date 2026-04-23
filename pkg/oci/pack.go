@@ -194,10 +194,7 @@ func (c *Client) imageFromManifest(ctx context.Context, tag string, desc ocispec
 	}
 
 	name := parseNameFromTag(tag)
-	tagPart := ""
-	if idx := strings.LastIndex(tag, ":"); idx >= 0 {
-		tagPart = tag[idx+1:]
-	}
+	_, tagPart := splitRefTag(tag)
 
 	return &LocalImage{
 		Name:    name,

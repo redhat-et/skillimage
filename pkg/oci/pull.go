@@ -86,12 +86,12 @@ func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error
 // skillNameFromRef extracts the skill name from a reference like
 // "namespace/name:tag" -- it returns "name".
 func skillNameFromRef(ref string) string {
-	// Strip tag.
 	name := ref
-	if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		name = ref[:idx]
+	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
 		name = ref[:idx]
 	}
-	// Take the last path segment.
 	if idx := strings.LastIndex(name, "/"); idx >= 0 {
 		name = name[idx+1:]
 	}
