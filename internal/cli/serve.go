@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-et/skillimage/internal/server"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func newServeCmd() *cobra.Command {
@@ -20,6 +21,7 @@ func newServeCmd() *cobra.Command {
 		registryURL  string
 		namespace    string
 		repositories string
+		registryType string
 		syncInterval string
 		tlsVerify    bool
 	)
@@ -61,6 +63,7 @@ and search.`,
 				Repositories:  repos,
 				SkipTLSVerify: !tlsVerify,
 				SyncInterval:  interval,
+				RegistryType:  oci.RegistryType(registryType),
 			})
 		},
 	}
@@ -68,8 +71,9 @@ and search.`,
 	cmd.Flags().IntVar(&port, "port", 8080, "HTTP listen port")
 	cmd.Flags().StringVar(&dbPath, "db", "skillctl.db", "SQLite database path")
 	cmd.Flags().StringVar(&registryURL, "registry", "", "OCI registry URL (required)")
-	cmd.Flags().StringVar(&namespace, "namespace", "", "limit sync to a namespace prefix (requires /v2/_catalog support)")
-	cmd.Flags().StringVar(&repositories, "repositories", "", "comma-separated list of repository names to sync (bypasses /v2/_catalog discovery)")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "namespace for discovery (Quay: org name; OCI: prefix filter for /v2/_catalog)")
+	cmd.Flags().StringVar(&repositories, "repositories", "", "comma-separated repo names (bypasses discovery)")
+	cmd.Flags().StringVar(&registryType, "registry-type", "auto", `registry discovery type: "auto", "oci", or "quay"`)
 	cmd.Flags().StringVar(&syncInterval, "sync-interval", "60s", "background sync interval")
 	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
 

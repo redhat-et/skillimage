@@ -18,6 +18,7 @@ type SyncConfig struct {
 	Namespace     string
 	Repositories  []string
 	SkipTLSVerify bool
+	RegistryType  oci.RegistryType
 }
 
 // Sync performs a full sync from the OCI registry into the store.
@@ -34,7 +35,7 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 	slog.Info("discovered repositories", "count", len(repos))
 
 	if len(repos) == 0 {
-		slog.Warn("no repositories found — if using a public registry (quay.io, ghcr.io), set --repositories explicitly since most public registries do not support the /v2/_catalog API")
+		slog.Warn("no repositories found — try --registry-type quay for Quay registries, or --repositories to specify repo names explicitly")
 		return nil
 	}
 
@@ -84,7 +85,19 @@ func discoverRepositories(ctx context.Context, cfg SyncConfig) ([]string, error)
 		return cfg.Repositories, nil
 	}
 
-	repos, err := oci.ListRemoteRepositories(ctx, cfg.RegistryURL, cfg.Namespace, cfg.SkipTLSVerify)
+	d := oci.NewDiscoverer(oci.DiscoveryConfig{
+		RegistryURL:   cfg.RegistryURL,
+		Namespace:     cfg.Namespace,
+		SkipTLSVerify: cfg.SkipTLSVerify,
+		RegistryType:  cfg.RegistryType,
+	})
+	rt := cfg.RegistryType
+	if rt == "" || rt == oci.RegistryTypeAuto {
+		rt = oci.DetectRegistryType(cfg.RegistryURL)
+	}
+	slog.Info("discovering repositories", "registry", cfg.RegistryURL, "type", rt, "namespace", cfg.Namespace)
+
+	repos, err := d.Discover(ctx)
 	if err != nil {
 		return nil, err
 	}

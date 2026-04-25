@@ -9,6 +9,7 @@ import (
 
 	"github.com/redhat-et/skillimage/internal/handler"
 	"github.com/redhat-et/skillimage/internal/store"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 // Config holds settings for the catalog server.
@@ -20,6 +21,7 @@ type Config struct {
 	Repositories  []string
 	SkipTLSVerify bool
 	SyncInterval  time.Duration
+	RegistryType  oci.RegistryType
 }
 
 // Run starts the catalog server and blocks until ctx is cancelled.
@@ -35,6 +37,7 @@ func Run(ctx context.Context, cfg Config) error {
 		Namespace:     cfg.Namespace,
 		Repositories:  cfg.Repositories,
 		SkipTLSVerify: cfg.SkipTLSVerify,
+		RegistryType:  cfg.RegistryType,
 	}
 
 	slog.Info("running initial sync", "registry", cfg.RegistryURL)
