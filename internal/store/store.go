@@ -15,7 +15,7 @@ type Store struct {
 
 // Skill represents a single skill version indexed from the OCI registry.
 type Skill struct {
-	ID            int64  `json:"id"`
+	ID            int64  `json:"-"`
 	Repository    string `json:"repository"`
 	Tag           string `json:"tag"`
 	Digest        string `json:"digest"`
