@@ -9,6 +9,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
@@ -39,19 +40,22 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 		return nil
 	}
 
-	var indexed int
+	var indexed, fetchErrors, totalTags int
 	for _, repo := range repos {
 		tags, err := oci.ListRemoteTags(ctx, cfg.RegistryURL, repo, cfg.SkipTLSVerify)
 		if err != nil {
 			slog.Warn("listing tags failed, skipping repo", "repo", repo, "error", err)
+			fetchErrors++
 			continue
 		}
 		slog.Info("found tags", "repo", repo, "count", len(tags))
+		totalTags += len(tags)
 
 		for _, tag := range tags {
 			sm, err := oci.FetchManifestAnnotations(ctx, cfg.RegistryURL, repo, tag, cfg.SkipTLSVerify)
 			if err != nil {
 				slog.Warn("fetching manifest failed, skipping", "repo", repo, "tag", tag, "error", err)
+				fetchErrors++
 				continue
 			}
 			if sm == nil {
@@ -69,11 +73,15 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 
 	slog.Info("sync indexed skills", "count", indexed)
 
-	deleted, err := s.DeleteStale(syncStart)
-	if err != nil {
-		slog.Warn("stale cleanup failed", "error", err)
-	} else if deleted > 0 {
-		slog.Info("cleaned up stale entries", "count", deleted)
+	if indexed == 0 && fetchErrors > 0 {
+		slog.Warn("skipping stale cleanup because no skills were indexed and there were fetch errors", "errors", fetchErrors)
+	} else {
+		deleted, err := s.DeleteStale(syncStart)
+		if err != nil {
+			slog.Warn("stale cleanup failed", "error", err)
+		} else if deleted > 0 {
+			slog.Info("cleaned up stale entries", "count", deleted)
+		}
 	}
 
 	return nil
@@ -122,7 +130,7 @@ func manifestToSkill(sm *oci.SkillManifest) Skill {
 		Name:          parseName(sm.Repository),
 		Namespace:     ann[ocispec.AnnotationVendor],
 		Version:       ann[ocispec.AnnotationVersion],
-		Status:        ann[oci.AnnotationStatus],
+		Status:        ann[lifecycle.StatusAnnotation],
 		DisplayName:   ann[ocispec.AnnotationTitle],
 		Description:   ann[ocispec.AnnotationDescription],
 		Authors:       ann[ocispec.AnnotationAuthors],

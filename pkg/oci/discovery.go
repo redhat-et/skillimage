@@ -96,7 +96,12 @@ func (d *QuayDiscoverer) Discover(ctx context.Context) ([]string, error) {
 
 	base := d.apiBaseURL
 	if base == "" {
-		base = "https://" + d.registryURL
+		host := d.registryURL
+		if strings.HasPrefix(host, "https://") || strings.HasPrefix(host, "http://") {
+			base = host
+		} else {
+			base = "https://" + host
+		}
 	}
 
 	token := d.loadAuthToken()

@@ -10,6 +10,8 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/registry/remote"
+
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
 // SkillManifest holds metadata extracted from a manifest's annotations.
@@ -93,9 +95,13 @@ func FetchManifestAnnotations(ctx context.Context, registryURL, repoName, tag st
 	}
 	defer func() { _ = rc.Close() }()
 
-	manifestBytes, err := io.ReadAll(rc)
+	const maxManifestSize = 4 << 20 // 4 MiB
+	manifestBytes, err := io.ReadAll(io.LimitReader(rc, maxManifestSize))
 	if err != nil {
 		return nil, fmt.Errorf("reading manifest: %w", err)
+	}
+	if int64(len(manifestBytes)) >= maxManifestSize {
+		return nil, fmt.Errorf("manifest exceeds %d bytes", maxManifestSize)
 	}
 
 	var manifest ocispec.Manifest
@@ -106,7 +112,7 @@ func FetchManifestAnnotations(ctx context.Context, registryURL, repoName, tag st
 	if manifest.Annotations == nil {
 		return nil, nil
 	}
-	if _, ok := manifest.Annotations[AnnotationStatus]; !ok {
+	if _, ok := manifest.Annotations[lifecycle.StatusAnnotation]; !ok {
 		return nil, nil
 	}
 

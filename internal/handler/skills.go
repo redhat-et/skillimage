@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -98,7 +99,11 @@ func (h *SkillsHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SkillsHandler) GetByNamespace(w http.ResponseWriter, r *http.Request, ns, name string) {
 	skill, err := h.store.GetSkill(ns, name)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "skill not found", err)
+		status := http.StatusInternalServerError
+		if errors.Is(err, store.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		writeError(w, status, "skill not found", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, envelope{Data: skill})

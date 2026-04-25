@@ -127,7 +127,7 @@ func (c *Client) PackBundle(ctx context.Context, bundleDir string, opts BundlePa
 	ann := map[string]string{
 		AnnotationBundle:            "true",
 		AnnotationBundleSkills:      string(skillsJSON),
-		AnnotationStatus:            string(lifecycle.Draft),
+		lifecycle.StatusAnnotation:   string(lifecycle.Draft),
 		ocispec.AnnotationVersion:   opts.Tag,
 		ocispec.AnnotationCreated:   time.Now().UTC().Format(time.RFC3339),
 	}
@@ -136,6 +136,9 @@ func (c *Client) PackBundle(ctx context.Context, bundleDir string, opts BundlePa
 	}
 
 	bundleName := filepath.Base(bundleDir)
+	if bundleName == "." || bundleName == ".." || bundleName == "" {
+		return ocispec.Descriptor{}, fmt.Errorf("cannot determine bundle name from directory %q, use a named directory", bundleDir)
+	}
 	ann[ocispec.AnnotationTitle] = bundleName
 
 	manifest := ocispec.Manifest{

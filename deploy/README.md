@@ -55,7 +55,7 @@ to change the path, or `:memory:` for a non-persistent in-memory
 database:
 
 ```bash
-bin/skillctl serve --registry quay.io --repositories ... --db :memory:
+bin/skillctl serve --registry quay.io --namespace skillimage --db :memory:
 ```
 
 ## Dev workflow (build, push, deploy)
@@ -73,7 +73,7 @@ Always`), and tails the logs. The full cycle takes about 30 seconds.
 If you only want to test locally without pushing to a cluster:
 
 ```bash
-make build && bin/skillctl serve --registry quay.io --repositories ...
+make build && bin/skillctl serve --registry quay.io --namespace skillimage
 ```
 
 ## OpenShift with Internal Registry
@@ -115,14 +115,12 @@ oc policy add-role-to-user system:image-puller \
 
 ### Filter by namespace prefix
 
-To index only skills from a specific namespace prefix, edit the
+To index only skills from a specific namespace prefix, patch the
 ConfigMap:
 
 ```bash
-oc create configmap skillctl-catalog-config \
-  --from-literal=registry-url=image-registry.openshift-image-registry.svc:5000 \
-  --from-literal=registry-namespace=team1 \
-  --dry-run=client -o yaml | oc apply -f -
+oc patch configmap skillctl-catalog-config --type merge \
+  -p '{"data":{"registry-namespace":"team1"}}'
 ```
 
 ### Access from inside the cluster
@@ -151,10 +149,8 @@ Quay REST API for repository discovery. Set `--namespace` to
 the Quay organization name:
 
 ```bash
-oc create configmap skillctl-catalog-config \
-  --from-literal=registry-url=quay.io \
-  --from-literal=registry-namespace=myorg \
-  --dry-run=client -o yaml | oc apply -f -
+oc patch configmap skillctl-catalog-config --type merge \
+  -p '{"data":{"registry-url":"quay.io","registry-namespace":"myorg"}}'
 ```
 
 > **Important:** Quay.io defaults new repositories to **private**.
@@ -170,14 +166,14 @@ adapter.
 
 ### Using other external registries (GHCR, Harbor, Docker Hub)
 
-For registries without a discovery adapter, use `--repositories`
-to specify exact repository names:
+For registries without a discovery adapter, edit the deployment
+to add `--repositories` with exact repo names:
 
 ```bash
-oc create configmap skillctl-catalog-config \
-  --from-literal=registry-url=ghcr.io \
-  --from-literal=registry-repositories=myorg/skill-a,myorg/skill-b \
-  --dry-run=client -o yaml | oc apply -f -
+oc set env deploy/skillctl-catalog REGISTRY_REPOSITORIES=myorg/skill-a,myorg/skill-b
+oc patch deploy/skillctl-catalog --type json -p '[
+  {"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--repositories=$(REGISTRY_REPOSITORIES)"}
+]'
 ```
 
 For private external registries that require authentication:

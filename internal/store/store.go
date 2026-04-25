@@ -2,11 +2,15 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+// ErrNotFound is returned when a skill is not found.
+var ErrNotFound = errors.New("not found")
 
 // Store provides SQLite-backed storage for the skill catalog index.
 type Store struct {
@@ -54,10 +58,12 @@ func New(dsn string) (*Store, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 	if err := db.Ping(); err != nil {
+		_ = db.Close()
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 	s := &Store{db: db}
 	if err := s.createSchema(); err != nil {
+		_ = db.Close()
 		return nil, fmt.Errorf("creating schema: %w", err)
 	}
 	return s, nil
@@ -127,7 +133,7 @@ func (s *Store) UpsertSkill(sk Skill) error {
 func (s *Store) ListSkills(f ListFilter) ([]Skill, error) {
 	where, args := buildFilterClause(f)
 	query := "SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills" + where
-	query += " ORDER BY namespace, name, version"
+	query += " ORDER BY namespace, name, created DESC"
 
 	if f.PerPage > 0 {
 		offset := 0
@@ -151,7 +157,7 @@ func (s *Store) GetSkill(namespace, name string) (*Skill, error) {
 		return nil, err
 	}
 	if len(skills) == 0 {
-		return nil, fmt.Errorf("skill %s/%s not found", namespace, name)
+		return nil, ErrNotFound
 	}
 	return &skills[0], nil
 }
@@ -195,7 +201,7 @@ func buildFilterClause(f ListFilter) (string, []any) {
 	}
 	for _, tag := range f.Tags {
 		clause += " AND tags_json LIKE ?"
-		args = append(args, "%"+tag+"%")
+		args = append(args, `%"`+tag+`"%`)
 	}
 
 	return clause, args

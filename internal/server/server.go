@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -38,6 +39,10 @@ func Run(ctx context.Context, cfg Config) error {
 		Repositories:  cfg.Repositories,
 		SkipTLSVerify: cfg.SkipTLSVerify,
 		RegistryType:  cfg.RegistryType,
+	}
+
+	if cfg.SyncInterval <= 0 {
+		return fmt.Errorf("sync interval must be positive, got %s", cfg.SyncInterval)
 	}
 
 	slog.Info("running initial sync", "registry", cfg.RegistryURL)
@@ -88,7 +93,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}()
 
 	slog.Info("server listening", "port", cfg.Port)
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil

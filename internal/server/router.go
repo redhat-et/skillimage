@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -34,7 +35,7 @@ func NewRouter(db *store.Store, syncFn func(), contentCfg handler.ContentConfig)
 		r.Get("/skills/{ns}/{name}/versions", func(w http.ResponseWriter, r *http.Request) {
 			skills.Versions(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"))
 		})
-		r.Get("/skills/{ns}/{name}/versions/{ver}/content", func(w http.ResponseWriter, r *http.Request) {
+		r.With(middleware.Timeout(30*time.Second)).Get("/skills/{ns}/{name}/versions/{ver}/content", func(w http.ResponseWriter, r *http.Request) {
 			skills.Content(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"), chi.URLParam(r, "ver"))
 		})
 		r.Post("/sync", syncH.Trigger)

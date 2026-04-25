@@ -50,9 +50,20 @@ and search.`,
 			)
 			defer cancel()
 
+			rt := oci.RegistryType(registryType)
+			switch rt {
+			case oci.RegistryTypeAuto, oci.RegistryTypeOCI, oci.RegistryTypeQuay:
+			default:
+				return fmt.Errorf("invalid --registry-type %q, must be auto, oci, or quay", registryType)
+			}
+
 			var repos []string
 			if repositories != "" {
-				repos = strings.Split(repositories, ",")
+				for _, r := range strings.Split(repositories, ",") {
+					if s := strings.TrimSpace(r); s != "" {
+						repos = append(repos, s)
+					}
+				}
 			}
 
 			return server.Run(ctx, server.Config{
@@ -63,7 +74,7 @@ and search.`,
 				Repositories:  repos,
 				SkipTLSVerify: !tlsVerify,
 				SyncInterval:  interval,
-				RegistryType:  oci.RegistryType(registryType),
+				RegistryType:  rt,
 			})
 		},
 	}
