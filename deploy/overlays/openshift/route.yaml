@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: skillctl-catalog
+  labels:
+    app.kubernetes.io/name: skillctl-catalog
+    app.kubernetes.io/component: server
+spec:
+  to:
+    kind: Service
+    name: skillctl-catalog
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

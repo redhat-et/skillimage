@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skillctl-catalog-config
+  labels:
+    app.kubernetes.io/name: skillctl-catalog
+    app.kubernetes.io/component: server
+data:
+  registry-url: image-registry.openshift-image-registry.svc:5000
+  # For Quay registries, set registry-namespace to the org name.
+  # The server auto-detects Quay and discovers repos via the Quay API.
+  # Example:
+  # registry-url: quay.io
+  # registry-namespace: skillimage
