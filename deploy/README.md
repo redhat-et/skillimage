@@ -5,16 +5,24 @@
 Run the catalog server directly on your machine. Useful for
 development and testing before deploying to a cluster.
 
-### Serve from Quay.io (public repos)
+### Serve from Quay.io (auto-discovery)
 
 ```bash
 make build
 bin/skillctl serve \
   --registry quay.io \
-  --repositories skillimage/business/document-reviewer,skillimage/business/document-summarizer \
+  --namespace skillimage \
   --tls-verify \
   --sync-interval 300s
 ```
+
+The server auto-detects Quay and discovers all public repos in
+the `skillimage` organization. New repos are picked up on the
+next sync cycle.
+
+> **Note:** Quay.io defaults new repos to private. If a pushed
+> skill doesn't appear after sync, check that the repository
+> is set to public in Quay's web UI.
 
 Then in another terminal:
 
@@ -136,16 +144,39 @@ ROUTE=$(oc get route skillctl-catalog -o jsonpath='{.spec.host}')
 curl https://$ROUTE/api/v1/skills
 ```
 
-### Using an external registry (Quay, GHCR, Harbor)
+### Using Quay.io (auto-discovery)
 
-Public registries like Quay.io, GHCR, and Docker Hub do not support
-the `/v2/_catalog` API for repository discovery. Use
-`--repositories` to specify the exact repository names to sync:
+The catalog server auto-detects Quay registries and uses the
+Quay REST API for repository discovery. Set `--namespace` to
+the Quay organization name:
 
 ```bash
 oc create configmap skillctl-catalog-config \
   --from-literal=registry-url=quay.io \
-  --from-literal=registry-repositories=skillimage/business/document-reviewer,skillimage/business/document-summarizer \
+  --from-literal=registry-namespace=myorg \
+  --dry-run=client -o yaml | oc apply -f -
+```
+
+> **Important:** Quay.io defaults new repositories to **private**.
+> The catalog server can only discover public repositories (unless
+> authenticated with an org-admin token). After pushing a new skill
+> image, go to **quay.io → Repository Settings → Make Public**, or
+> the sync will silently skip it. If a repo you expect is missing,
+> check its visibility first.
+
+For self-hosted Quay instances that don't have "quay" in the
+hostname, add `--registry-type quay` to force the Quay discovery
+adapter.
+
+### Using other external registries (GHCR, Harbor, Docker Hub)
+
+For registries without a discovery adapter, use `--repositories`
+to specify exact repository names:
+
+```bash
+oc create configmap skillctl-catalog-config \
+  --from-literal=registry-url=ghcr.io \
+  --from-literal=registry-repositories=myorg/skill-a,myorg/skill-b \
   --dry-run=client -o yaml | oc apply -f -
 ```
 
