@@ -28,3 +28,6 @@ Thumbs.db
 
 # Scratch/working documents
 scratch/
+
+# Git worktrees
+.worktrees/
