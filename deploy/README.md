@@ -1,5 +1,73 @@
 # Deploying the Skill Catalog Server
 
+## Local (no cluster needed)
+
+Run the catalog server directly on your machine. Useful for
+development and testing before deploying to a cluster.
+
+### Serve from Quay.io (public repos)
+
+```bash
+make build
+bin/skillctl serve \
+  --registry quay.io \
+  --repositories skillimage/business/document-reviewer,skillimage/business/document-summarizer \
+  --tls-verify \
+  --sync-interval 300s
+```
+
+Then in another terminal:
+
+```bash
+curl http://localhost:8080/api/v1/skills | jq
+curl http://localhost:8080/api/v1/skills/business/document-reviewer | jq
+curl -X POST http://localhost:8080/api/v1/sync
+```
+
+### Serve from a local OCI registry
+
+Start a local registry (e.g. [zot](https://zotregistry.dev)):
+
+```bash
+# Run zot on port 5000
+podman run -d -p 5000:5000 ghcr.io/project-zot/zot-linux-amd64:latest
+
+# Push skills to it
+bin/skillctl pack examples/document-reviewer
+bin/skillctl push test/document-reviewer:1.0.0-draft localhost:5000/test/document-reviewer:1.0.0-draft --tls-verify=false
+
+# Serve — local registries support /v2/_catalog, so no --repositories needed
+bin/skillctl serve --registry localhost:5000 --tls-verify=false
+```
+
+### SQLite database
+
+By default the database is created at `./skillctl.db`. Use `--db`
+to change the path, or `:memory:` for a non-persistent in-memory
+database:
+
+```bash
+bin/skillctl serve --registry quay.io --repositories ... --db :memory:
+```
+
+## Dev workflow (build, push, deploy)
+
+For iterating on changes against a live OpenShift cluster:
+
+```bash
+make deploy
+```
+
+This single command builds the image, pushes it, restarts the
+deployment (which pulls the new `:latest` via `imagePullPolicy:
+Always`), and tails the logs. The full cycle takes about 30 seconds.
+
+If you only want to test locally without pushing to a cluster:
+
+```bash
+make build && bin/skillctl serve --registry quay.io --repositories ...
+```
+
 ## OpenShift with Internal Registry
 
 The OpenShift overlay deploys the catalog server configured to index

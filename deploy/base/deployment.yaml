@@ -24,6 +24,7 @@ spec:
       containers:
         - name: server
           image: ghcr.io/redhat-et/skillctl:latest
+          imagePullPolicy: Always
           args:
             - serve
             - --registry=$(REGISTRY_URL)

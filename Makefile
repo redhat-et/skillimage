@@ -1,7 +1,8 @@
-.PHONY: build test lint fmt clean image
+.PHONY: build test lint fmt clean image deploy
 
 BINARY := skillctl
 BINDIR := bin
+IMAGE  := ghcr.io/redhat-et/skillctl:latest
 
 build:
 	go build -o $(BINDIR)/$(BINARY) ./cmd/skillctl
@@ -16,7 +17,14 @@ fmt:
 	gofumpt -l -w .
 
 image:
-	podman -c rhel build -f Dockerfile.local -t ghcr.io/redhat-et/skillctl:latest .
+	podman -c rhel build -f Dockerfile.local -t $(IMAGE) .
+
+deploy: image
+	podman -c rhel push $(IMAGE)
+	oc rollout restart deploy/skillctl-catalog
+	oc rollout status deploy/skillctl-catalog --timeout=60s
+	oc logs -f deploy/skillctl-catalog &
+	@sleep 3 && echo "---" && echo "Route: https://$$(oc get route skillctl-catalog -o jsonpath='{.spec.host}')/api/v1/skills"
 
 clean:
 	rm -rf $(BINDIR)
