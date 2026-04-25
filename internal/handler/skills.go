@@ -2,21 +2,32 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/redhat-et/skillimage/internal/store"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
+
+// ContentConfig holds registry connection settings for on-demand content retrieval.
+type ContentConfig struct {
+	RegistryURL   string
+	SkipTLSVerify bool
+}
 
 // SkillsHandler provides HTTP handlers for skill listing and detail.
 type SkillsHandler struct {
-	store *store.Store
+	store      *store.Store
+	contentCfg ContentConfig
 }
 
 // NewSkillsHandler creates a handler backed by the given store.
-func NewSkillsHandler(s *store.Store) *SkillsHandler {
-	return &SkillsHandler{store: s}
+func NewSkillsHandler(s *store.Store, cfg ContentConfig) *SkillsHandler {
+	return &SkillsHandler{store: s, contentCfg: cfg}
 }
 
 type envelope struct {
@@ -101,6 +112,93 @@ func (h *SkillsHandler) Versions(w http.ResponseWriter, r *http.Request, ns, nam
 		return
 	}
 	writeJSON(w, http.StatusOK, envelope{Data: versions})
+}
+
+// Content handles GET /api/v1/skills/{ns}/{name}/versions/{ver}/content.
+// It pulls the skill layer from the registry on demand and returns SKILL.md.
+func (h *SkillsHandler) Content(w http.ResponseWriter, r *http.Request, ns, name, ver string) {
+	versions, err := h.store.GetVersions(ns, name)
+	if err != nil || len(versions) == 0 {
+		writeError(w, http.StatusNotFound, "skill not found", fmt.Errorf("no versions for %s/%s", ns, name))
+		return
+	}
+
+	var skill *store.Skill
+	for i := range versions {
+		if versions[i].Version == ver {
+			skill = &versions[i]
+			break
+		}
+	}
+	if skill == nil {
+		writeError(w, http.StatusNotFound, "version not found", fmt.Errorf("version %s not found", ver))
+		return
+	}
+
+	ref := fmt.Sprintf("%s/%s:%s", h.contentCfg.RegistryURL, skill.Repository, skill.Tag)
+	tmpDir, err := os.MkdirTemp("", "skillctl-content-*")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error", err)
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
+	storeDir, err := os.MkdirTemp("", "skillctl-store-*")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error", err)
+		return
+	}
+	defer os.RemoveAll(storeDir)
+
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error", err)
+		return
+	}
+
+	_, err = client.Pull(r.Context(), ref, oci.PullOptions{
+		OutputDir:     tmpDir,
+		SkipTLSVerify: h.contentCfg.SkipTLSVerify,
+	})
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "pull failed", err)
+		return
+	}
+
+	content, err := findSkillMD(tmpDir)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "SKILL.md not found", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(content)
+}
+
+func findSkillMD(dir string) ([]byte, error) {
+	var content []byte
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Name() == "SKILL.md" && !d.IsDir() {
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			content = data
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if content == nil {
+		return nil, fmt.Errorf("SKILL.md not found in extracted content")
+	}
+	return content, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

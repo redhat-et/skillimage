@@ -11,7 +11,7 @@ import (
 )
 
 // NewRouter builds the chi router with all API routes.
-func NewRouter(db *store.Store, syncFn func()) *chi.Mux {
+func NewRouter(db *store.Store, syncFn func(), contentCfg handler.ContentConfig) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -19,7 +19,7 @@ func NewRouter(db *store.Store, syncFn func()) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.SetHeader("Content-Type", "application/json"))
 
-	skills := handler.NewSkillsHandler(db)
+	skills := handler.NewSkillsHandler(db, contentCfg)
 	syncH := handler.NewSyncHandler(syncFn)
 	healthH := handler.NewHealthHandler()
 
@@ -30,6 +30,9 @@ func NewRouter(db *store.Store, syncFn func()) *chi.Mux {
 		})
 		r.Get("/skills/{ns}/{name}/versions", func(w http.ResponseWriter, r *http.Request) {
 			skills.Versions(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"))
+		})
+		r.Get("/skills/{ns}/{name}/versions/{ver}/content", func(w http.ResponseWriter, r *http.Request) {
+			skills.Content(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"), chi.URLParam(r, "ver"))
 		})
 		r.Post("/sync", syncH.Trigger)
 	})

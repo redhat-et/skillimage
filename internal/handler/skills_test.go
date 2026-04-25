@@ -29,7 +29,7 @@ func TestListSkillsHandler(t *testing.T) {
 		Version: "1.0.0", Description: "Reviews docs",
 	})
 
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 	req := httptest.NewRequest("GET", "/api/v1/skills", nil)
 	w := httptest.NewRecorder()
 
@@ -60,7 +60,7 @@ func TestListSkillsHandler(t *testing.T) {
 
 func TestListSkillsEmpty(t *testing.T) {
 	db := setupStore(t)
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 	req := httptest.NewRequest("GET", "/api/v1/skills", nil)
 	w := httptest.NewRecorder()
 
@@ -92,7 +92,7 @@ func TestListSkillsWithFilters(t *testing.T) {
 		Name: "b", Namespace: "team1", Status: "draft",
 	})
 
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 
 	req := httptest.NewRequest("GET", "/api/v1/skills?status=published", nil)
 	w := httptest.NewRecorder()
@@ -117,7 +117,7 @@ func TestGetByNamespace(t *testing.T) {
 		Namespace: "team1", Status: "published",
 	})
 
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 	req := httptest.NewRequest("GET", "/api/v1/skills/team1/doc-reviewer", nil)
 	w := httptest.NewRecorder()
 
@@ -130,7 +130,7 @@ func TestGetByNamespace(t *testing.T) {
 
 func TestGetByNamespaceNotFound(t *testing.T) {
 	db := setupStore(t)
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 	req := httptest.NewRequest("GET", "/api/v1/skills/team1/nonexistent", nil)
 	w := httptest.NewRecorder()
 
@@ -154,7 +154,7 @@ func TestVersions(t *testing.T) {
 		Namespace: "team1", Version: "1.0.0", Status: "published",
 	})
 
-	h := handler.NewSkillsHandler(db)
+	h := handler.NewSkillsHandler(db, handler.ContentConfig{})
 	req := httptest.NewRequest("GET", "/api/v1/skills/team1/doc-reviewer/versions", nil)
 	w := httptest.NewRecorder()
 

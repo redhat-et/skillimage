@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/redhat-et/skillimage/internal/handler"
 	"github.com/redhat-et/skillimage/internal/store"
 )
 
@@ -60,7 +61,11 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 	}()
 
-	router := NewRouter(db, triggerSync)
+	contentCfg := handler.ContentConfig{
+		RegistryURL:   cfg.RegistryURL,
+		SkipTLSVerify: cfg.SkipTLSVerify,
+	}
+	router := NewRouter(db, triggerSync, contentCfg)
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           router,
