@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillctl-catalog
+spec:
+  template:
+    spec:
+      containers:
+        - name: server
+          args:
+            - serve
+            - --registry=$(REGISTRY_URL)
+            - --db=/data/skillctl.db
+            - --namespace=$(REGISTRY_NAMESPACE)
+            - --sync-interval=60s
+            - --tls-verify=false
+          env:
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillctl-catalog-config
+                  key: registry-url
+            - name: REGISTRY_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillctl-catalog-config
+                  key: registry-namespace
+                  optional: true

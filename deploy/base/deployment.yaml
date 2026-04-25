@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillctl-catalog
+  labels:
+    app.kubernetes.io/name: skillctl-catalog
+    app.kubernetes.io/component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillctl-catalog
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillctl-catalog
+        app.kubernetes.io/component: server
+    spec:
+      serviceAccountName: skillctl-catalog
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: ghcr.io/redhat-et/skillctl:latest
+          args:
+            - serve
+            - --registry=$(REGISTRY_URL)
+            - --db=/data/skillctl.db
+            - --sync-interval=60s
+          env:
+            - name: REGISTRY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillctl-catalog-config
+                  key: registry-url
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: skillctl-catalog-data
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
