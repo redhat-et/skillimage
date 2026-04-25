@@ -58,19 +58,26 @@ func newRemoteRepository(ref string, skipTLSVerify bool) (*remote.Repository, er
 		return nil, fmt.Errorf("loading credentials: %w", err)
 	}
 
-	authClient := &auth.Client{
+	repo.Client = newAuthClient(store, skipTLSVerify)
+	return repo, nil
+}
+
+func insecureHTTPClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}, //nolint:gosec // user-requested via --tls-verify=false
+		},
+	}
+}
+
+func newAuthClient(store credentials.Store, skipTLSVerify bool) *auth.Client {
+	c := &auth.Client{
 		Credential: credentials.Credential(store),
 	}
 	if skipTLSVerify {
-		authClient.Client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}, //nolint:gosec // user-requested via --tls-verify=false
-			},
-		}
+		c.Client = insecureHTTPClient()
 	}
-	repo.Client = authClient
-
-	return repo, nil
+	return c
 }
 
 // credentialStore returns a credential store that checks Docker config first,
