@@ -76,6 +76,11 @@ func (c *Client) PackBundle(ctx context.Context, bundleDir string, opts BundlePa
 		skillNames = append(skillNames, sc.Metadata.Name)
 		if namespace == "" {
 			namespace = sc.Metadata.Namespace
+		} else if sc.Metadata.Namespace != namespace {
+			return ocispec.Descriptor{}, fmt.Errorf(
+				"namespace mismatch: skill %s has namespace %q, expected %q (all skills in a bundle must share the same namespace)",
+				sc.Metadata.Name, sc.Metadata.Namespace, namespace,
+			)
 		}
 	}
 
@@ -115,7 +120,10 @@ func (c *Client) PackBundle(ctx context.Context, bundleDir string, opts BundlePa
 		return ocispec.Descriptor{}, fmt.Errorf("pushing config: %w", err)
 	}
 
-	skillsJSON, _ := json.Marshal(skillNames)
+	skillsJSON, err := json.Marshal(skillNames)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("marshaling skill names: %w", err)
+	}
 	ann := map[string]string{
 		AnnotationBundle:            "true",
 		AnnotationBundleSkills:      string(skillsJSON),

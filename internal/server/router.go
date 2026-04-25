@@ -17,13 +17,16 @@ func NewRouter(db *store.Store, syncFn func(), contentCfg handler.ContentConfig)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.SetHeader("Content-Type", "application/json"))
 
 	skills := handler.NewSkillsHandler(db, contentCfg)
 	syncH := handler.NewSyncHandler(syncFn)
 	healthH := handler.NewHealthHandler()
 
 	r.Route("/api/v1", func(r chi.Router) {
+		// Default to JSON for API endpoints; handlers that return other
+		// content types (e.g. Content returns text/markdown) override this.
+		r.Use(middleware.SetHeader("Content-Type", "application/json"))
+
 		r.Get("/skills", skills.List)
 		r.Get("/skills/{ns}/{name}", func(w http.ResponseWriter, r *http.Request) {
 			skills.GetByNamespace(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"))

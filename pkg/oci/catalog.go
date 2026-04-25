@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -27,11 +28,14 @@ func ListRemoteRepositories(ctx context.Context, registryURL, prefix string, ski
 		return nil, fmt.Errorf("creating registry client: %w", err)
 	}
 
-	store, err := credentialStore()
-	if err == nil {
-		reg.Client = newAuthClient(store, skipTLSVerify)
-	} else if skipTLSVerify {
-		reg.Client = insecureHTTPClient()
+	creds, err := credentialStore()
+	if err != nil {
+		slog.Warn("loading credentials failed, registry calls may fail with 401/403", "error", err)
+		if skipTLSVerify {
+			reg.Client = insecureHTTPClient()
+		}
+	} else {
+		reg.Client = newAuthClient(creds, skipTLSVerify)
 	}
 
 	var repos []string

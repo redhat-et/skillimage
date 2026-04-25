@@ -67,13 +67,20 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 
 func manifestToSkill(sm *oci.SkillManifest) Skill {
 	ann := sm.Annotations
-	wc, _ := strconv.Atoi(ann[oci.AnnotationWordCount])
+	var wc int
+	if wcStr := ann[oci.AnnotationWordCount]; wcStr != "" {
+		var err error
+		wc, err = strconv.Atoi(wcStr)
+		if err != nil {
+			slog.Debug("invalid word count annotation, defaulting to 0", "value", wcStr, "error", err)
+		}
+	}
 
 	sk := Skill{
 		Repository:    sm.Repository,
 		Tag:           sm.Tag,
 		Digest:        sm.Digest,
-		Name:          parseName(ann, sm.Repository),
+		Name:          parseName(sm.Repository),
 		Namespace:     ann[ocispec.AnnotationVendor],
 		Version:       ann[ocispec.AnnotationVersion],
 		Status:        ann[oci.AnnotationStatus],
@@ -95,10 +102,7 @@ func manifestToSkill(sm *oci.SkillManifest) Skill {
 	return sk
 }
 
-func parseName(ann map[string]string, repo string) string {
-	if title := ann[ocispec.AnnotationTitle]; title != "" {
-		return title
-	}
+func parseName(repo string) string {
 	if idx := strings.LastIndex(repo, "/"); idx >= 0 {
 		return repo[idx+1:]
 	}

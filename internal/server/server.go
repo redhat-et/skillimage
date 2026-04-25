@@ -40,9 +40,12 @@ func Run(ctx context.Context, cfg Config) error {
 		slog.Error("initial sync failed", "error", err)
 	}
 
+	syncCtx, syncCancel := context.WithCancel(ctx)
+	defer syncCancel()
+
 	triggerSync := func() {
 		slog.Info("sync triggered")
-		if err := db.Sync(context.Background(), syncCfg); err != nil {
+		if err := db.Sync(syncCtx, syncCfg); err != nil {
 			slog.Error("sync failed", "error", err)
 		}
 		slog.Info("sync complete")

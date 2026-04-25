@@ -125,33 +125,8 @@ func (s *Store) UpsertSkill(sk Skill) error {
 
 // ListSkills returns skills matching the given filter criteria.
 func (s *Store) ListSkills(f ListFilter) ([]Skill, error) {
-	query := "SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills WHERE 1=1"
-	var args []any
-
-	if f.Status != "" {
-		query += " AND status = ?"
-		args = append(args, f.Status)
-	}
-	if f.Namespace != "" {
-		query += " AND namespace = ?"
-		args = append(args, f.Namespace)
-	}
-	if f.Compatibility != "" {
-		query += " AND compatibility = ?"
-		args = append(args, f.Compatibility)
-	}
-	if f.Query != "" {
-		query += " AND (name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
-		q := "%" + f.Query + "%"
-		args = append(args, q, q, q)
-	}
-	if len(f.Tags) > 0 {
-		for _, tag := range f.Tags {
-			query += " AND tags_json LIKE ?"
-			args = append(args, "%"+tag+"%")
-		}
-	}
-
+	where, args := buildFilterClause(f)
+	query := "SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills" + where
 	query += " ORDER BY namespace, name, version"
 
 	if f.PerPage > 0 {
@@ -159,7 +134,8 @@ func (s *Store) ListSkills(f ListFilter) ([]Skill, error) {
 		if f.Page > 1 {
 			offset = (f.Page - 1) * f.PerPage
 		}
-		query += fmt.Sprintf(" LIMIT %d OFFSET %d", f.PerPage, offset)
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, f.PerPage, offset)
 	}
 
 	return s.querySkills(query, args...)
@@ -190,36 +166,39 @@ func (s *Store) GetVersions(namespace, name string) ([]Skill, error) {
 
 // CountSkills returns the count of skills matching the given filter.
 func (s *Store) CountSkills(f ListFilter) (int, error) {
-	query := "SELECT COUNT(*) FROM skills WHERE 1=1"
+	where, args := buildFilterClause(f)
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM skills"+where, args...).Scan(&count)
+	return count, err
+}
+
+func buildFilterClause(f ListFilter) (string, []any) {
+	clause := " WHERE 1=1"
 	var args []any
 
 	if f.Status != "" {
-		query += " AND status = ?"
+		clause += " AND status = ?"
 		args = append(args, f.Status)
 	}
 	if f.Namespace != "" {
-		query += " AND namespace = ?"
+		clause += " AND namespace = ?"
 		args = append(args, f.Namespace)
 	}
 	if f.Compatibility != "" {
-		query += " AND compatibility = ?"
+		clause += " AND compatibility = ?"
 		args = append(args, f.Compatibility)
 	}
 	if f.Query != "" {
-		query += " AND (name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
+		clause += " AND (name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
 		q := "%" + f.Query + "%"
 		args = append(args, q, q, q)
 	}
-	if len(f.Tags) > 0 {
-		for _, tag := range f.Tags {
-			query += " AND tags_json LIKE ?"
-			args = append(args, "%"+tag+"%")
-		}
+	for _, tag := range f.Tags {
+		clause += " AND tags_json LIKE ?"
+		args = append(args, "%"+tag+"%")
 	}
 
-	var count int
-	err := s.db.QueryRow(query, args...).Scan(&count)
-	return count, err
+	return clause, args
 }
 
 // DeleteStale removes skills that were last synced before the given time.

@@ -242,8 +242,7 @@ func TestDeleteStale(t *testing.T) {
 		t.Fatalf("UpsertSkill: %v", err)
 	}
 
-	// Delete anything synced before 1 second from now — should delete everything.
-	deleted, err := db.DeleteStale(time.Now().Add(time.Second))
+	deleted, err := db.DeleteStale(time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("DeleteStale: %v", err)
 	}

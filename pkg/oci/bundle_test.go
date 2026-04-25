@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/redhat-et/skillimage/pkg/oci"
@@ -139,6 +140,55 @@ metadata:
 	})
 	if err == nil {
 		t.Fatal("expected error for invalid skill in bundle")
+	}
+}
+
+func TestPackBundleNamespaceMismatch(t *testing.T) {
+	bundleDir := t.TempDir()
+
+	for _, tc := range []struct {
+		name string
+		ns   string
+	}{
+		{"skill-a", "team1"},
+		{"skill-b", "team2"},
+	} {
+		skillDir := filepath.Join(bundleDir, tc.name)
+		if err := os.MkdirAll(skillDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		skillYAML := []byte(`apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: ` + tc.name + `
+  namespace: ` + tc.ns + `
+  version: 1.0.0
+  description: Test skill.
+spec:
+  prompt: SKILL.md
+`)
+		if err := os.WriteFile(filepath.Join(skillDir, "skill.yaml"), skillYAML, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("prompt"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	_, err = client.PackBundle(context.Background(), bundleDir, oci.BundlePackOptions{
+		Tag: "1.0.0-draft",
+	})
+	if err == nil {
+		t.Fatal("expected error for namespace mismatch")
+	}
+	if !strings.Contains(err.Error(), "namespace mismatch") {
+		t.Errorf("error = %q, want to contain 'namespace mismatch'", err.Error())
 	}
 }
 
