@@ -237,7 +237,7 @@ func (s *Store) querySkills(query string, args ...any) ([]Skill, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var skills []Skill
 	for rows.Next() {

@@ -12,7 +12,7 @@ func TestNewStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	skills, err := db.ListSkills(store.ListFilter{})
 	if err != nil {
@@ -28,7 +28,7 @@ func TestUpsertAndList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	skill := store.Skill{
 		Repository:  "team1/doc-reviewer",
@@ -64,7 +64,7 @@ func TestUpsertUpdatesExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	skill := store.Skill{
 		Repository: "team1/doc-reviewer", Tag: "1.0.0-draft",
@@ -101,7 +101,7 @@ func TestListSkillsFilters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	skills := []store.Skill{
 		{Repository: "team1/skill-a", Tag: "1.0.0", Digest: "sha256:aaa", Name: "skill-a", Namespace: "team1", Status: "published", Description: "Kubernetes debugging", TagsJSON: `["kubernetes"]`},
@@ -145,7 +145,7 @@ func TestGetSkill(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.UpsertSkill(store.Skill{
 		Repository: "team1/doc-reviewer", Tag: "1.0.0",
@@ -174,7 +174,7 @@ func TestGetVersions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	for _, sk := range []store.Skill{
 		{Repository: "team1/doc-reviewer", Tag: "1.0.0-draft", Digest: "sha256:aaa", Name: "doc-reviewer", Namespace: "team1", Version: "1.0.0", Status: "draft"},
@@ -199,7 +199,7 @@ func TestCountSkills(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	for _, sk := range []store.Skill{
 		{Repository: "team1/a", Tag: "1.0.0", Digest: "sha256:a", Name: "a", Namespace: "team1", Status: "published"},
@@ -233,7 +233,7 @@ func TestDeleteStale(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.UpsertSkill(store.Skill{
 		Repository: "team1/old", Tag: "1.0.0",
@@ -265,7 +265,7 @@ func TestPagination(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	for i := range 5 {
 		if err := db.UpsertSkill(store.Skill{

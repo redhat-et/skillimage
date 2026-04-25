@@ -27,7 +27,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("opening store: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	syncCfg := store.SyncConfig{
 		RegistryURL:   cfg.RegistryURL,

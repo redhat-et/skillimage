@@ -141,14 +141,14 @@ func (h *SkillsHandler) Content(w http.ResponseWriter, r *http.Request, ns, name
 		writeError(w, http.StatusInternalServerError, "internal error", err)
 		return
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	storeDir, err := os.MkdirTemp("", "skillctl-store-*")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal error", err)
 		return
 	}
-	defer os.RemoveAll(storeDir)
+	defer func() { _ = os.RemoveAll(storeDir) }()
 
 	client, err := oci.NewClient(storeDir)
 	if err != nil {
