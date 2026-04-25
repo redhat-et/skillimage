@@ -5,11 +5,7 @@ resources:
   - ../../base
   - route.yaml
   - rolebinding.yaml
-
-configMapGenerator:
-  - name: skillctl-catalog-config
-    literals:
-      - registry-url=image-registry.openshift-image-registry.svc:5000
+  - configmap.yaml
 
 patches:
   - path: deployment-patch.yaml

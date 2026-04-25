@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skillctl-catalog-config
+  labels:
+    app.kubernetes.io/name: skillctl-catalog
+    app.kubernetes.io/component: server
+data:
+  registry-url: image-registry.openshift-image-registry.svc:5000
+  # For public registries (quay.io, ghcr.io), set registry-repositories
+  # to a comma-separated list of repo names since /v2/_catalog is not
+  # supported. Example:
+  # registry-repositories: skillimage/business/document-reviewer,skillimage/business/document-summarizer
