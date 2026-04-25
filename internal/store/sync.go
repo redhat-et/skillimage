@@ -16,6 +16,7 @@ import (
 type SyncConfig struct {
 	RegistryURL   string
 	Namespace     string
+	Repositories  []string
 	SkipTLSVerify bool
 }
 
@@ -26,17 +27,25 @@ type SyncConfig struct {
 func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 	syncStart := time.Now()
 
-	repos, err := oci.ListRemoteRepositories(ctx, cfg.RegistryURL, cfg.Namespace, cfg.SkipTLSVerify)
+	repos, err := discoverRepositories(ctx, cfg)
 	if err != nil {
 		return err
 	}
+	slog.Info("discovered repositories", "count", len(repos))
 
+	if len(repos) == 0 {
+		slog.Warn("no repositories found — if using a public registry (quay.io, ghcr.io), set --repositories explicitly since most public registries do not support the /v2/_catalog API")
+		return nil
+	}
+
+	var indexed int
 	for _, repo := range repos {
 		tags, err := oci.ListRemoteTags(ctx, cfg.RegistryURL, repo, cfg.SkipTLSVerify)
 		if err != nil {
 			slog.Warn("listing tags failed, skipping repo", "repo", repo, "error", err)
 			continue
 		}
+		slog.Info("found tags", "repo", repo, "count", len(tags))
 
 		for _, tag := range tags {
 			sm, err := oci.FetchManifestAnnotations(ctx, cfg.RegistryURL, repo, tag, cfg.SkipTLSVerify)
@@ -51,9 +60,13 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 			sk := manifestToSkill(sm)
 			if err := s.UpsertSkill(sk); err != nil {
 				slog.Warn("upserting skill failed", "repo", repo, "tag", tag, "error", err)
+			} else {
+				indexed++
 			}
 		}
 	}
+
+	slog.Info("sync indexed skills", "count", indexed)
 
 	deleted, err := s.DeleteStale(syncStart)
 	if err != nil {
@@ -63,6 +76,19 @@ func (s *Store) Sync(ctx context.Context, cfg SyncConfig) error {
 	}
 
 	return nil
+}
+
+func discoverRepositories(ctx context.Context, cfg SyncConfig) ([]string, error) {
+	if len(cfg.Repositories) > 0 {
+		slog.Info("using explicitly configured repositories", "repos", cfg.Repositories)
+		return cfg.Repositories, nil
+	}
+
+	repos, err := oci.ListRemoteRepositories(ctx, cfg.RegistryURL, cfg.Namespace, cfg.SkipTLSVerify)
+	if err != nil {
+		return nil, err
+	}
+	return repos, nil
 }
 
 func manifestToSkill(sm *oci.SkillManifest) Skill {

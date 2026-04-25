@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ func newServeCmd() *cobra.Command {
 		dbPath       string
 		registryURL  string
 		namespace    string
+		repositories string
 		syncInterval string
 		tlsVerify    bool
 	)
@@ -46,11 +48,17 @@ and search.`,
 			)
 			defer cancel()
 
+			var repos []string
+			if repositories != "" {
+				repos = strings.Split(repositories, ",")
+			}
+
 			return server.Run(ctx, server.Config{
 				Port:          port,
 				DBPath:        dbPath,
 				RegistryURL:   registryURL,
 				Namespace:     namespace,
+				Repositories:  repos,
 				SkipTLSVerify: !tlsVerify,
 				SyncInterval:  interval,
 			})
@@ -60,7 +68,8 @@ and search.`,
 	cmd.Flags().IntVar(&port, "port", 8080, "HTTP listen port")
 	cmd.Flags().StringVar(&dbPath, "db", "skillctl.db", "SQLite database path")
 	cmd.Flags().StringVar(&registryURL, "registry", "", "OCI registry URL (required)")
-	cmd.Flags().StringVar(&namespace, "namespace", "", "limit sync to a namespace prefix")
+	cmd.Flags().StringVar(&namespace, "namespace", "", "limit sync to a namespace prefix (requires /v2/_catalog support)")
+	cmd.Flags().StringVar(&repositories, "repositories", "", "comma-separated list of repository names to sync (bypasses /v2/_catalog discovery)")
 	cmd.Flags().StringVar(&syncInterval, "sync-interval", "60s", "background sync interval")
 	cmd.Flags().BoolVar(&tlsVerify, "tls-verify", true, "require HTTPS and verify certificates")
 

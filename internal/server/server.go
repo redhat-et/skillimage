@@ -17,6 +17,7 @@ type Config struct {
 	DBPath        string
 	RegistryURL   string
 	Namespace     string
+	Repositories  []string
 	SkipTLSVerify bool
 	SyncInterval  time.Duration
 }
@@ -32,6 +33,7 @@ func Run(ctx context.Context, cfg Config) error {
 	syncCfg := store.SyncConfig{
 		RegistryURL:   cfg.RegistryURL,
 		Namespace:     cfg.Namespace,
+		Repositories:  cfg.Repositories,
 		SkipTLSVerify: cfg.SkipTLSVerify,
 	}
 

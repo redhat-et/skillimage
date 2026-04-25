@@ -70,8 +70,18 @@ curl https://$ROUTE/api/v1/skills
 
 ### Using an external registry (Quay, GHCR, Harbor)
 
-For registries that require authentication, create a pull secret
-and mount it:
+Public registries like Quay.io, GHCR, and Docker Hub do not support
+the `/v2/_catalog` API for repository discovery. Use
+`--repositories` to specify the exact repository names to sync:
+
+```bash
+oc create configmap skillctl-catalog-config \
+  --from-literal=registry-url=quay.io \
+  --from-literal=registry-repositories=skillimage/business/document-reviewer,skillimage/business/document-summarizer \
+  --dry-run=client -o yaml | oc apply -f -
+```
+
+For private external registries that require authentication:
 
 ```bash
 # Create a pull secret
@@ -82,15 +92,6 @@ oc create secret docker-registry skillctl-registry-auth \
 
 # Link the secret to the service account
 oc secrets link skillctl-catalog skillctl-registry-auth --for=pull
-
-# Update the ConfigMap with the external registry URL
-oc create configmap skillctl-catalog-config \
-  --from-literal=registry-url=quay.io \
-  --from-literal=registry-namespace=myorg/skills \
-  --dry-run=client -o yaml | oc apply -f -
-
-# Remove --tls-verify=false from the deployment args
-oc set env deploy/skillctl-catalog REGISTRY_URL=quay.io
 ```
 
 ## Plain Kubernetes
