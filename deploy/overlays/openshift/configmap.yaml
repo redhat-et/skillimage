@@ -7,7 +7,8 @@ metadata:
     app.kubernetes.io/component: server
 data:
   registry-url: image-registry.openshift-image-registry.svc:5000
-  # For public registries (quay.io, ghcr.io), set registry-repositories
-  # to a comma-separated list of repo names since /v2/_catalog is not
-  # supported. Example:
-  # registry-repositories: skillimage/business/document-reviewer,skillimage/business/document-summarizer
+  # For Quay registries, set registry-namespace to the org name.
+  # The server auto-detects Quay and discovers repos via the Quay API.
+  # Example:
+  # registry-url: quay.io
+  # registry-namespace: skillimage

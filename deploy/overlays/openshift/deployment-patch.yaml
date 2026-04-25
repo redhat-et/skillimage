@@ -11,7 +11,7 @@ spec:
             - serve
             - --registry=$(REGISTRY_URL)
             - --db=/data/skillctl.db
-            - --repositories=$(REGISTRY_REPOSITORIES)
+            - --namespace=$(REGISTRY_NAMESPACE)
             - --sync-interval=60s
             - --tls-verify=false
           env:
@@ -20,9 +20,9 @@ spec:
                 configMapKeyRef:
                   name: skillctl-catalog-config
                   key: registry-url
-            - name: REGISTRY_REPOSITORIES
+            - name: REGISTRY_NAMESPACE
               valueFrom:
                 configMapKeyRef:
                   name: skillctl-catalog-config
-                  key: registry-repositories
+                  key: registry-namespace
                   optional: true
