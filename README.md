@@ -205,6 +205,26 @@ containers:
         readOnly: true
 ```
 
+#### Example: mounting a skill into an agent runtime
+
+This example pulls a document-summarizer skill from the registry
+and mounts it into [OpenCode](https://github.com/anomalyco/opencode),
+an open-source AI coding agent with a terminal UI:
+
+```bash
+podman pull quay.io/skillimage/business/document-summarizer:1.0.0-testing
+podman volume create --driver image \
+  --opt image=quay.io/skillimage/business/document-summarizer:1.0.0-testing \
+  summarizer-skill
+podman run -it --rm \
+  -v summarizer-skill:/root/.config/opencode/skills/document-summarizer \
+  ghcr.io/anomalyco/opencode
+```
+
+OpenCode discovers the skill automatically. Running `/skills`
+in the TUI shows the document-summarizer, and the agent uses it
+when asked to summarize a document or web page.
+
 ### Running skillctl on OpenShift
 
 You can run skillctl directly on an OpenShift cluster to inspect
