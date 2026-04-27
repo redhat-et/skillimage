@@ -164,6 +164,41 @@ This works because all skill metadata is stored in OCI manifest
 annotations, not inside the image layers. A catalog UI or CI
 pipeline can read skill metadata with a single manifest fetch.
 
+### Using skill images
+
+Since skills are standard OCI images, you can mount them directly
+into running containers with `--mount type=image`:
+
+```bash
+podman pull quay.io/myorg/hello-world:1.0.0
+podman run --rm \
+  --mount type=image,source=quay.io/myorg/hello-world:1.0.0,destination=/skills \
+  my-agent:latest
+```
+
+This works with both Podman and Docker on Linux. On macOS, the
+remote client (both Podman and Docker) does not support image
+mounts; use a Linux VM or pull the skill inside the container
+instead.
+
+For Kubernetes / OpenShift, use
+[ImageVolumes](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
+(beta in K8s 1.33) to mount skills directly into pods:
+
+```yaml
+volumes:
+  - name: skill
+    image:
+      reference: quay.io/myorg/hello-world:1.0.0
+      pullPolicy: IfNotPresent
+containers:
+  - name: agent
+    volumeMounts:
+      - name: skill
+        mountPath: /skills
+        readOnly: true
+```
+
 ### Running skillctl on OpenShift
 
 You can run skillctl directly on an OpenShift cluster to inspect
