@@ -23,9 +23,9 @@ import (
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
-// Pack reads a skill directory, validates the SkillCard, creates an OCI image,
+// Build reads a skill directory, validates the SkillCard, creates an OCI image,
 // and stores it in the local OCI layout. It returns the manifest descriptor.
-func (c *Client) Pack(ctx context.Context, skillDir string, opts PackOptions) (ocispec.Descriptor, error) {
+func (c *Client) Build(ctx context.Context, skillDir string, opts BuildOptions) (ocispec.Descriptor, error) {
 	// 1. Read and parse skill.yaml.
 	skillPath := filepath.Join(skillDir, "skill.yaml")
 	f, err := os.Open(skillPath)

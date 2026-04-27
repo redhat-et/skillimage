@@ -37,7 +37,7 @@ spec:
 	}
 }
 
-func TestPackBundle(t *testing.T) {
+func TestBuildBundle(t *testing.T) {
 	bundleDir := t.TempDir()
 	writeTestBundle(t, bundleDir)
 
@@ -48,11 +48,11 @@ func TestPackBundle(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	desc, err := client.PackBundle(ctx, bundleDir, oci.BundlePackOptions{
+	desc, err := client.BuildBundle(ctx, bundleDir, oci.BundleBuildOptions{
 		Tag: "1.0.0-draft",
 	})
 	if err != nil {
-		t.Fatalf("PackBundle: %v", err)
+		t.Fatalf("BuildBundle: %v", err)
 	}
 	if desc.Digest.String() == "" {
 		t.Error("expected non-empty digest")
@@ -63,7 +63,7 @@ func TestPackBundle(t *testing.T) {
 		t.Fatalf("ListLocal: %v", err)
 	}
 	if len(images) == 0 {
-		t.Fatal("expected at least 1 image after PackBundle")
+		t.Fatal("expected at least 1 image after BuildBundle")
 	}
 
 	found := false
@@ -78,7 +78,7 @@ func TestPackBundle(t *testing.T) {
 	}
 }
 
-func TestPackBundleRequiresTag(t *testing.T) {
+func TestBuildBundleRequiresTag(t *testing.T) {
 	bundleDir := t.TempDir()
 	writeTestBundle(t, bundleDir)
 
@@ -88,13 +88,13 @@ func TestPackBundleRequiresTag(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.PackBundle(context.Background(), bundleDir, oci.BundlePackOptions{})
+	_, err = client.BuildBundle(context.Background(), bundleDir, oci.BundleBuildOptions{})
 	if err == nil {
 		t.Fatal("expected error when tag is empty")
 	}
 }
 
-func TestPackBundleEmptyDir(t *testing.T) {
+func TestBuildBundleEmptyDir(t *testing.T) {
 	emptyDir := t.TempDir()
 
 	storeDir := t.TempDir()
@@ -103,7 +103,7 @@ func TestPackBundleEmptyDir(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.PackBundle(context.Background(), emptyDir, oci.BundlePackOptions{
+	_, err = client.BuildBundle(context.Background(), emptyDir, oci.BundleBuildOptions{
 		Tag: "1.0.0-draft",
 	})
 	if err == nil {
@@ -111,7 +111,7 @@ func TestPackBundleEmptyDir(t *testing.T) {
 	}
 }
 
-func TestPackBundleInvalidSkill(t *testing.T) {
+func TestBuildBundleInvalidSkill(t *testing.T) {
 	bundleDir := t.TempDir()
 	skillDir := filepath.Join(bundleDir, "bad-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
@@ -135,7 +135,7 @@ metadata:
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.PackBundle(context.Background(), bundleDir, oci.BundlePackOptions{
+	_, err = client.BuildBundle(context.Background(), bundleDir, oci.BundleBuildOptions{
 		Tag: "1.0.0-draft",
 	})
 	if err == nil {
@@ -143,7 +143,7 @@ metadata:
 	}
 }
 
-func TestPackBundleNamespaceMismatch(t *testing.T) {
+func TestBuildBundleNamespaceMismatch(t *testing.T) {
 	bundleDir := t.TempDir()
 
 	for _, tc := range []struct {
@@ -181,7 +181,7 @@ spec:
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.PackBundle(context.Background(), bundleDir, oci.BundlePackOptions{
+	_, err = client.BuildBundle(context.Background(), bundleDir, oci.BundleBuildOptions{
 		Tag: "1.0.0-draft",
 	})
 	if err == nil {
@@ -192,7 +192,7 @@ spec:
 	}
 }
 
-func TestPackBundleAnnotations(t *testing.T) {
+func TestBuildBundleAnnotations(t *testing.T) {
 	bundleDir := t.TempDir()
 	writeTestBundle(t, bundleDir)
 
@@ -203,11 +203,11 @@ func TestPackBundleAnnotations(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.PackBundle(ctx, bundleDir, oci.BundlePackOptions{
+	_, err = client.BuildBundle(ctx, bundleDir, oci.BundleBuildOptions{
 		Tag: "1.0.0-draft",
 	})
 	if err != nil {
-		t.Fatalf("PackBundle: %v", err)
+		t.Fatalf("BuildBundle: %v", err)
 	}
 
 	images, err := client.ListLocal()

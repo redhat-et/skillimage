@@ -383,12 +383,12 @@
 
   <!-- WORKFLOW -->
   <section>
-    <h2>The Workflow: <span class="accent">Pack, Push, Mount</span></h2>
+    <h2>The Workflow: <span class="accent">Build, Push, Mount</span></h2>
     <div class="code-section">
       <div class="code-block">
-        <span class="comment"># Pack a skill directory into a local OCI image</span><br>
-        <span class="cmd">$ skillctl pack</span> examples/skills/resume-screener<br>
-        <span class="output">Packed &rarr; oci-layout &middot; sha256:65af81ce... &middot; 1226 bytes</span><br><br>
+        <span class="comment"># Build a skill directory into a local OCI image</span><br>
+        <span class="cmd">$ skillctl build</span> examples/skills/resume-screener<br>
+        <span class="output">Built &rarr; oci-layout &middot; sha256:65af81ce... &middot; 1226 bytes</span><br><br>
 
         <span class="comment"># Push to any OCI registry</span><br>
         <span class="cmd">$ skillctl push</span> quay.io/myorg/skill-resume-screener:1.0.0<br>

@@ -91,14 +91,14 @@ The `namespace` field groups skills locally. When you run
 within the skill card and is independent of the remote registry
 path.
 
-### Validate, pack, and inspect
+### Validate, build, and inspect
 
 ```bash
 # Validate the SkillCard against the JSON Schema
 bin/skillctl validate examples/hello-world/
 
-# Pack into a local OCI image (tagged as 1.0.0-draft)
-bin/skillctl pack examples/hello-world/
+# Build into a local OCI image (tagged as 1.0.0-draft)
+bin/skillctl build examples/hello-world/
 
 # List local images
 bin/skillctl list
@@ -266,7 +266,7 @@ make fmt         # Format code
 | `cmd/skillctl/` | CLI entry point |
 | `internal/cli/` | Cobra commands |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
-| `pkg/oci/` | OCI image pack/push/pull/inspect/promote |
+| `pkg/oci/` | OCI image build/push/pull/inspect/promote |
 | `pkg/lifecycle/` | State machine, tag rules |
 | `schemas/` | JSON Schema for SkillCard |
 | `examples/` | Sample skills |
@@ -283,7 +283,7 @@ consumers: skillctl CLI, agent runtimes, CI/CD
       |
   pkg/ (public Go API)
   +-- skillcard/  parse, validate, serialize
-  +-- oci/        pack, push, pull, inspect, promote
+  +-- oci/        build, push, pull, inspect, promote
   +-- lifecycle/  state machine, tag rules
       |
   OCI registries (quay.io, ghcr.io, Zot)

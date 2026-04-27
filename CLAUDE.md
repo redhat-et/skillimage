@@ -28,7 +28,7 @@ make fmt         # Format code
 | `internal/store/` | Storage interface + SQLite |
 | `internal/server/` | Router, middleware |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
-| `pkg/oci/` | Pack/push/pull/inspect (oras-go) |
+| `pkg/oci/` | Build/push/pull/inspect (oras-go) |
 | `pkg/verify/` | Sigstore signature verification |
 | `pkg/lifecycle/` | State machine, semver rules |
 | `pkg/diff/` | Version comparison |
@@ -40,7 +40,7 @@ make fmt         # Format code
 ## Architecture
 
 Library-first: core logic in `pkg/`, CLI and server are thin
-consumers. Two operating modes: standalone CLI (pack/push/pull
+consumers. Two operating modes: standalone CLI (build/push/pull
 against OCI registries, no server needed) and server mode
 (lifecycle management, search, UI support via REST API).
 
