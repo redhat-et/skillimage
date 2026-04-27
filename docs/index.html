@@ -337,6 +337,7 @@
     <div class="buttons">
       <a href="https://github.com/redhat-et/skillimage" class="btn btn-primary">GitHub</a>
       <a href="#install" class="btn btn-outline">Install</a>
+      <a href="examples.html" class="btn btn-outline">Examples</a>
       <a href="#presentations" class="btn btn-outline">Presentations</a>
     </div>
 
@@ -397,9 +398,9 @@
         <span class="cmd">$ skillctl inspect</span> quay.io/myorg/skill-resume-screener:1.0.0<br>
         <span class="output">Name: resume-screener &middot; Version: 1.0.0 &middot; Status: published</span><br><br>
 
-        <span class="comment"># Pull and install for your agent</span><br>
-        <span class="cmd">$ skillctl pull</span> -o ~/.claude/skills quay.io/myorg/skill-resume-screener:1.0.0<br>
-        <span class="output">Pulled &rarr; ~/.claude/skills/resume-screener/</span>
+        <span class="comment"># Mount into a running container</span><br>
+        <span class="cmd">$ podman run</span> --mount type=image,source=quay.io/myorg/skill-resume-screener:1.0.0,destination=/skills my-agent<br>
+        <span class="output">Skills loaded from /skills/resume-screener</span>
       </div>
     </div>
   </section>
@@ -448,6 +449,7 @@
     <div class="copyright">Pavel Anni &middot; Office of CTO &middot; Red Hat</div>
     <div class="links">
       <a href="https://github.com/redhat-et/skillimage">GitHub</a>
+      <a href="examples.html">Examples</a>
       <a href="https://github.com/redhat-et/skillimage/releases">Releases</a>
       <a href="https://agentskills.io">Agent Skills Spec</a>
     </div>

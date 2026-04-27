@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Examples — skillctl</title>
+  <meta name="description" content="How to mount OCI skill images into containers and agent runtimes using Podman, Docker, and Kubernetes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-primary: #000000;
+      --bg-secondary: #1f1f1f;
+      --bg-surface: #292929;
+      --text-primary: #ffffff;
+      --text-secondary: #c7c7c7;
+      --text-muted: #a3a3a3;
+      --accent: #ee0000;
+      --accent-dark: #a60000;
+      --accent-light: #f56e6e;
+      --border: #383838;
+      --font-display: 'Red Hat Display', sans-serif;
+      --font-body: 'Red Hat Text', sans-serif;
+      --font-mono: 'Red Hat Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* === HERO === */
+    .hero {
+      padding: 80px 64px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 50%;
+      height: 50%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.10) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; z-index: 1; }
+
+    .hero-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .hero-label a { color: var(--accent); }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      max-width: 700px;
+    }
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      line-height: 1.7;
+    }
+    .accent { color: var(--accent); }
+
+    /* === SECTIONS === */
+    section {
+      padding: 64px 64px;
+      border-top: 1px solid var(--border);
+    }
+    section h2 {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    section .section-desc {
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin-bottom: 32px;
+    }
+
+    /* === CARDS === */
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 800px;
+    }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 28px;
+    }
+    .card h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .card pre {
+      background: var(--bg-surface);
+      border-radius: 3px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent-light);
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .card .note {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* === DEMO === */
+    .demo {
+      max-width: 800px;
+    }
+    .demo .step {
+      margin-bottom: 32px;
+    }
+    .demo .step-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-primary);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .demo .step p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .demo pre {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 20px 24px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent-light);
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+
+    /* === K8S YAML === */
+    .yaml-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 20px 24px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      line-height: 1.7;
+      max-width: 800px;
+    }
+    .yaml-block .key { color: var(--accent-light); }
+    .yaml-block .val { color: var(--text-primary); }
+    .yaml-block .comment { color: var(--text-muted); }
+
+    /* === FOOTER === */
+    footer {
+      padding: 40px 64px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    footer .copyright {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    footer .links {
+      display: flex;
+      gap: 24px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .hero { padding: 48px 24px 32px; }
+      section { padding: 48px 24px; }
+      footer { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label"><a href="/">skillctl</a> &middot; examples</div>
+    <h1>Using <span class="accent">Skill Images</span></h1>
+    <p class="subtitle">Skill images are standard OCI images. Mount them into containers and pods the same way you mount any other image &mdash; no special tooling required.</p>
+  </div>
+
+  <!-- MOUNTING METHODS -->
+  <section>
+    <h2>Mounting <span class="accent">Methods</span></h2>
+    <p class="section-desc">Three ways to mount a skill image, depending on your environment.</p>
+    <div class="cards">
+
+      <div class="card">
+        <h3>Linux (Podman / Docker)</h3>
+        <p>Mount the skill image directly into a container using <code>--mount type=image</code>.</p>
+        <pre>podman pull quay.io/myorg/my-skill:1.0.0
+
+podman run --rm \
+  --mount type=image,\
+source=quay.io/myorg/my-skill:1.0.0,\
+destination=/skills \
+  my-agent:latest</pre>
+        <p class="note">Works with both Podman and Docker on Linux.</p>
+      </div>
+
+      <div class="card">
+        <h3>macOS (Podman / Docker)</h3>
+        <p>The remote client doesn't support <code>--mount type=image</code>. Create an image-backed volume instead.</p>
+        <pre>podman pull quay.io/myorg/my-skill:1.0.0
+
+podman volume create --driver image \
+  --opt image=quay.io/myorg/my-skill:1.0.0 \
+  my-skill-vol
+
+podman run --rm \
+  -v my-skill-vol:/skills:ro \
+  my-agent:latest</pre>
+      </div>
+
+      <div class="card">
+        <h3>Kubernetes / OpenShift</h3>
+        <p>Use ImageVolumes (beta in K8s 1.33, OpenShift 4.20+) to mount skills directly into pods.</p>
+        <pre><span style="color:var(--text-muted)"># Pod spec (volumes + volumeMounts)</span>
+volumes:
+  - name: skill
+    image:
+      reference: quay.io/myorg/my-skill:1.0.0
+      pullPolicy: IfNotPresent
+containers:
+  - name: agent
+    volumeMounts:
+      - name: skill
+        mountPath: /skills
+        readOnly: true</pre>
+        <p class="note">Requires CRI-O runtime. Pulled and cached by the kubelet.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DEMO: OPENCODE -->
+  <section>
+    <h2>Demo: Skill in <span class="accent">OpenCode</span></h2>
+    <p class="section-desc"><a href="https://github.com/anomalyco/opencode">OpenCode</a> is an open-source AI coding agent with a terminal UI. This walkthrough mounts a document-summarizer skill into OpenCode and uses it to summarize a blog post.</p>
+
+    <div class="demo">
+      <div class="step">
+        <div class="step-label">Step 1 &mdash; Pull and create a volume</div>
+        <p>Pull the skill image and create an image-backed volume (works on both Linux and macOS).</p>
+        <pre>podman pull quay.io/skillimage/business/document-summarizer:1.0.0-testing
+
+podman volume create --driver image \
+  --opt image=quay.io/skillimage/business/document-summarizer:1.0.0-testing \
+  summarizer-skill</pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 2 &mdash; Start OpenCode with the skill mounted</div>
+        <p>Mount the volume into OpenCode's skill directory. OpenCode discovers skills automatically.</p>
+        <pre>podman run -it --rm \
+  -v summarizer-skill:/root/.config/opencode/skills/document-summarizer \
+  ghcr.io/anomalyco/opencode</pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 3 &mdash; Use the skill</div>
+        <p>Inside the OpenCode TUI, run <code>/skills</code> to confirm the document-summarizer is loaded. Then ask the agent to summarize a document &mdash; it will use web fetch to retrieve the content and apply the skill automatically.</p>
+        <pre><span style="color:var(--text-muted)">> /skills</span>
+document-summarizer  loaded
+
+<span style="color:var(--text-muted)">> please summarize this blog:
+  https://next.redhat.com/2026/03/05/zero-trust-ai-agents/</span>
+Using tool: web_fetch ...
+Using skill: document-summarizer ...
+<span style="color:var(--text-secondary)">## Summary
+The article discusses deploying multi-agent systems
+on Kubernetes with zero-trust networking ...</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="copyright">Pavel Anni &middot; Office of CTO &middot; Red Hat</div>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="https://github.com/redhat-et/skillimage">GitHub</a>
+      <a href="https://github.com/redhat-et/skillimage/releases">Releases</a>
+      <a href="https://agentskills.io">Agent Skills Spec</a>
+    </div>
+  </footer>
+
+</body>
+</html>
