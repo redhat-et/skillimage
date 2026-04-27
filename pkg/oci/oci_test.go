@@ -33,7 +33,7 @@ spec:
 	}
 }
 
-func TestPackAndListLocal(t *testing.T) {
+func TestBuildAndListLocal(t *testing.T) {
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)
 
@@ -44,9 +44,9 @@ func TestPackAndListLocal(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	desc, err := client.Pack(ctx, skillDir, oci.PackOptions{})
+	desc, err := client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 	if desc.Digest.String() == "" {
 		t.Error("expected non-empty digest")
@@ -70,7 +70,7 @@ func TestPackAndListLocal(t *testing.T) {
 	}
 }
 
-func TestPackValidatesSkillCard(t *testing.T) {
+func TestBuildValidatesSkillCard(t *testing.T) {
 	skillDir := t.TempDir()
 	badYAML := []byte(`apiVersion: wrong/v1
 kind: SkillCard
@@ -90,13 +90,13 @@ metadata:
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.Pack(context.Background(), skillDir, oci.PackOptions{})
+	_, err = client.Build(context.Background(), skillDir, oci.BuildOptions{})
 	if err == nil {
 		t.Fatal("expected error for invalid SkillCard")
 	}
 }
 
-func TestPackMissingSkillYAML(t *testing.T) {
+func TestBuildMissingSkillYAML(t *testing.T) {
 	emptyDir := t.TempDir()
 
 	storeDir := t.TempDir()
@@ -105,14 +105,14 @@ func TestPackMissingSkillYAML(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = client.Pack(context.Background(), emptyDir, oci.PackOptions{})
+	_, err = client.Build(context.Background(), emptyDir, oci.BuildOptions{})
 	if err == nil {
 		t.Fatal("expected error for missing skill.yaml")
 	}
 }
 
 func TestCopyToAndBack(t *testing.T) {
-	// Pack into source store
+	// Build into source store
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)
 
@@ -123,9 +123,9 @@ func TestCopyToAndBack(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = srcClient.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = srcClient.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	// Copy to destination store
@@ -162,9 +162,9 @@ func TestUnpack(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	// Unpack to output directory
@@ -197,9 +197,9 @@ func TestInspect(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	result, err := client.Inspect(ctx, "test/test-skill:1.0.0-draft")
@@ -231,9 +231,9 @@ func TestPromoteLocal(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	// Promote draft -> testing
@@ -306,9 +306,9 @@ spec:
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	result, err := client.Inspect(ctx, "test/annotated-skill:2.0.0-draft")
@@ -361,9 +361,9 @@ These five words are counted.
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	result, err := client.Inspect(ctx, "test/frontmatter-skill:1.0.0-draft")
@@ -387,9 +387,9 @@ func TestPromoteInvalidTransition(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	// Try invalid transition: draft -> published
@@ -422,9 +422,9 @@ spec:
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	result, err := client.Inspect(ctx, "test/minimal-skill:1.0.0-draft")
@@ -454,9 +454,9 @@ func TestTag(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	err = client.Tag(ctx, "test/test-skill:1.0.0-draft", "quay.io/myorg/test-skill:1.0.0-draft")
@@ -477,7 +477,7 @@ func TestTag(t *testing.T) {
 	}
 }
 
-func TestPackRedHatMediaType(t *testing.T) {
+func TestBuildRedHatMediaType(t *testing.T) {
 	skillDir := t.TempDir()
 	writeTestSkill(t, skillDir)
 
@@ -488,11 +488,11 @@ func TestPackRedHatMediaType(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	desc, err := client.Pack(ctx, skillDir, oci.PackOptions{
+	desc, err := client.Build(ctx, skillDir, oci.BuildOptions{
 		MediaType: oci.MediaTypeRedHat,
 	})
 	if err != nil {
-		t.Fatalf("Pack with redhat media type: %v", err)
+		t.Fatalf("Build with redhat media type: %v", err)
 	}
 	if desc.Digest.String() == "" {
 		t.Error("expected non-empty digest")
@@ -546,9 +546,9 @@ spec:
 	}
 
 	ctx := context.Background()
-	_, err = client.Pack(ctx, skillDir, oci.PackOptions{})
+	_, err = client.Build(ctx, skillDir, oci.BuildOptions{})
 	if err != nil {
-		t.Fatalf("Pack: %v", err)
+		t.Fatalf("Build: %v", err)
 	}
 
 	result, err := client.Inspect(ctx, "test/empty-md-skill:1.0.0-draft")

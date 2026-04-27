@@ -41,7 +41,7 @@ Start a local registry (e.g. [zot](https://zotregistry.dev)):
 podman run -d -p 5000:5000 ghcr.io/project-zot/zot-linux-amd64:latest
 
 # Push skills to it
-bin/skillctl pack examples/document-reviewer
+bin/skillctl build examples/document-reviewer
 bin/skillctl push test/document-reviewer:1.0.0-draft localhost:5000/test/document-reviewer:1.0.0-draft --tls-verify=false
 
 # Serve — local registries support /v2/_catalog, so no --repositories needed

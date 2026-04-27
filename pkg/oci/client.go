@@ -23,8 +23,8 @@ func NewClient(storePath string) (*Client, error) {
 	}, nil
 }
 
-// PackOptions configures the Pack operation.
-type PackOptions struct {
+// BuildOptions configures the Build operation.
+type BuildOptions struct {
 	// Tag overrides the default tag. If empty, defaults to <version>-draft.
 	Tag string
 	// MediaType selects the media type profile. Empty or "standard" uses

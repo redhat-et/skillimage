@@ -20,16 +20,16 @@ import (
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
-// BundlePackOptions configures the PackBundle operation.
-type BundlePackOptions struct {
+// BundleBuildOptions configures the BuildBundle operation.
+type BundleBuildOptions struct {
 	Tag       string
 	MediaType MediaTypeProfile
 }
 
-// PackBundle reads a directory containing multiple skill subdirectories,
+// BuildBundle reads a directory containing multiple skill subdirectories,
 // validates each SkillCard, creates a single OCI image with all skills,
 // and stores it in the local OCI layout.
-func (c *Client) PackBundle(ctx context.Context, bundleDir string, opts BundlePackOptions) (ocispec.Descriptor, error) {
+func (c *Client) BuildBundle(ctx context.Context, bundleDir string, opts BundleBuildOptions) (ocispec.Descriptor, error) {
 	if opts.Tag == "" {
 		return ocispec.Descriptor{}, fmt.Errorf("--tag is required for bundles")
 	}
