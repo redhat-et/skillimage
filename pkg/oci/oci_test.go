@@ -492,7 +492,7 @@ func TestBuildRedHatMediaType(t *testing.T) {
 		MediaType: oci.MediaTypeRedHat,
 	})
 	if err != nil {
-		t.Fatalf("Pack with redhat media type: %v", err)
+		t.Fatalf("Build with redhat media type: %v", err)
 	}
 	if desc.Digest.String() == "" {
 		t.Error("expected non-empty digest")
