@@ -177,9 +177,15 @@ podman run --rm \
 ```
 
 This works with both Podman and Docker on Linux. On macOS, the
-remote client (both Podman and Docker) does not support image
-mounts; use a Linux VM or pull the skill inside the container
-instead.
+remote client does not support `--mount type=image`, but you
+can create an image-backed volume instead:
+
+```bash
+podman pull quay.io/myorg/hello-world:1.0.0
+podman volume create --driver image \
+  --opt image=quay.io/myorg/hello-world:1.0.0 hello-world-skill
+podman run --rm -v hello-world-skill:/skills:ro my-agent:latest
+```
 
 For Kubernetes / OpenShift, use
 [ImageVolumes](https://kubernetes.io/docs/tasks/configure-pod-container/image-volumes/)
