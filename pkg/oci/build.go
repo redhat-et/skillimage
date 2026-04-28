@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	godigest "github.com/opencontainers/go-digest"
-	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/errdef"
 
@@ -98,43 +97,14 @@ func (c *Client) Build(ctx context.Context, skillDir string, opts BuildOptions) 
 	// 7. Build annotations from SkillCard.
 	annotations := buildAnnotations(sc, wordCount)
 
-	// 8. Create and push the OCI manifest.
-	manifest := ocispec.Manifest{
-		Versioned: specs.Versioned{SchemaVersion: 2},
-		MediaType: ocispec.MediaTypeImageManifest,
-		Config:    configDesc,
-		Layers:    []ocispec.Descriptor{layerDesc},
-		Annotations: annotations,
-	}
-
-	manifestBytes, err := json.Marshal(manifest)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("marshaling manifest: %w", err)
-	}
-
-	manifestDigest := godigest.FromBytes(manifestBytes)
-	manifestDesc := ocispec.Descriptor{
-		MediaType:   ocispec.MediaTypeImageManifest,
-		Digest:      manifestDigest,
-		Size:        int64(len(manifestBytes)),
-		Annotations: annotations,
-	}
-
-	if err := c.store.Push(ctx, manifestDesc, bytes.NewReader(manifestBytes)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
-		return ocispec.Descriptor{}, fmt.Errorf("pushing manifest: %w", err)
-	}
-
-	// 9. Tag as namespace/name:tag.
+	// 8. Build manifest, push, and tag.
 	tag := opts.Tag
 	if tag == "" {
 		tag = lifecycle.TagForState(sc.Metadata.Version, lifecycle.Draft)
 	}
 	ref := fmt.Sprintf("%s/%s:%s", sc.Metadata.Namespace, sc.Metadata.Name, tag)
-	if err := c.store.Tag(ctx, manifestDesc, ref); err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("tagging image: %w", err)
-	}
 
-	return manifestDesc, nil
+	return c.buildAndTagManifest(ctx, configDesc, []ocispec.Descriptor{layerDesc}, annotations, "", ref)
 }
 
 // ListLocal reads the store's tags and returns image metadata from manifest annotations.

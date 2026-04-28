@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -292,5 +293,82 @@ func TestPagination(t *testing.T) {
 	}
 	if len(page3) != 1 {
 		t.Errorf("page 3: got %d skills, want 1", len(page3))
+	}
+}
+
+func TestUpsertAndListCollections(t *testing.T) {
+	db, err := store.New(":memory:")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	col := store.Collection{
+		Repository:  "quay.io/myorg/collections/hr-skills",
+		Tag:         "1.0.0",
+		Digest:      "sha256:abc123",
+		Name:        "hr-skills",
+		Version:     "1.0.0",
+		Description: "HR skills collection",
+		SkillsJSON:  `[{"name":"doc-summarizer","image":"quay.io/org/doc-summarizer:1.0.0"}]`,
+		Created:     "2026-04-27T10:00:00Z",
+	}
+
+	if err := db.UpsertCollection(col); err != nil {
+		t.Fatalf("UpsertCollection: %v", err)
+	}
+
+	collections, err := db.ListCollections()
+	if err != nil {
+		t.Fatalf("ListCollections: %v", err)
+	}
+	if len(collections) != 1 {
+		t.Fatalf("expected 1 collection, got %d", len(collections))
+	}
+	if collections[0].Name != "hr-skills" {
+		t.Errorf("name = %q, want %q", collections[0].Name, "hr-skills")
+	}
+}
+
+func TestGetCollection(t *testing.T) {
+	db, err := store.New(":memory:")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	col := store.Collection{
+		Repository:  "quay.io/myorg/collections/hr-skills",
+		Tag:         "1.0.0",
+		Digest:      "sha256:abc123",
+		Name:        "hr-skills",
+		Version:     "1.0.0",
+		Description: "HR skills",
+		SkillsJSON:  `[{"name":"s1","image":"quay.io/org/s1:1.0.0"}]`,
+		Created:     "2026-04-27T10:00:00Z",
+	}
+	if err := db.UpsertCollection(col); err != nil {
+		t.Fatalf("UpsertCollection: %v", err)
+	}
+
+	got, err := db.GetCollection("hr-skills")
+	if err != nil {
+		t.Fatalf("GetCollection: %v", err)
+	}
+	if got.Version != "1.0.0" {
+		t.Errorf("version = %q, want %q", got.Version, "1.0.0")
+	}
+}
+
+func TestGetCollectionNotFound(t *testing.T) {
+	db, err := store.New(":memory:")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	_, err = db.GetCollection("nonexistent")
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }

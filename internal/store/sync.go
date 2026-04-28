@@ -141,11 +141,6 @@ func manifestToSkill(sm *oci.SkillManifest) Skill {
 		Created:       ann[ocispec.AnnotationCreated],
 	}
 
-	if ann[oci.AnnotationBundle] == "true" {
-		sk.Bundle = true
-		sk.BundleSkills = ann[oci.AnnotationBundleSkills]
-	}
-
 	return sk
 }
 
