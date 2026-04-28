@@ -38,6 +38,20 @@ type Skill struct {
 	SyncedAt      string `json:"synced_at"`
 }
 
+// Collection represents a collection of skills.
+type Collection struct {
+	ID          int64  `json:"-"`
+	Repository  string `json:"repository"`
+	Tag         string `json:"tag"`
+	Digest      string `json:"digest"`
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+	SkillsJSON  string `json:"skills_json"`
+	Created     string `json:"created"`
+	SyncedAt    string `json:"synced_at"`
+}
+
 // ListFilter controls which skills are returned by ListSkills.
 type ListFilter struct {
 	Query         string
@@ -97,6 +111,19 @@ func (s *Store) createSchema() error {
 		CREATE INDEX IF NOT EXISTS idx_skills_namespace ON skills(namespace);
 		CREATE INDEX IF NOT EXISTS idx_skills_status ON skills(status);
 		CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
+		CREATE TABLE IF NOT EXISTS collections (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository  TEXT NOT NULL,
+			tag         TEXT NOT NULL,
+			digest      TEXT NOT NULL,
+			name        TEXT NOT NULL,
+			version     TEXT,
+			description TEXT,
+			skills_json TEXT NOT NULL,
+			created     TEXT,
+			synced_at   TEXT NOT NULL,
+			UNIQUE(repository, tag)
+		);
 	`)
 	return err
 }
@@ -231,4 +258,61 @@ func (s *Store) querySkills(query string, args ...any) ([]Skill, error) {
 		skills = append(skills, sk)
 	}
 	return skills, rows.Err()
+}
+
+// UpsertCollection inserts a collection or updates it if the (repository, tag) pair already exists.
+func (s *Store) UpsertCollection(col Collection) error {
+	col.SyncedAt = time.Now().UTC().Format(time.RFC3339)
+	_, err := s.db.Exec(`
+		INSERT INTO collections (repository, tag, digest, name, version,
+			description, skills_json, created, synced_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(repository, tag) DO UPDATE SET
+			digest=excluded.digest, name=excluded.name,
+			version=excluded.version, description=excluded.description,
+			skills_json=excluded.skills_json, created=excluded.created,
+			synced_at=excluded.synced_at
+	`, col.Repository, col.Tag, col.Digest, col.Name, col.Version,
+		col.Description, col.SkillsJSON, col.Created, col.SyncedAt)
+	return err
+}
+
+// ListCollections returns all collections ordered by name.
+func (s *Store) ListCollections() ([]Collection, error) {
+	rows, err := s.db.Query(
+		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var collections []Collection
+	for rows.Next() {
+		var col Collection
+		if err := rows.Scan(&col.ID, &col.Repository, &col.Tag, &col.Digest,
+			&col.Name, &col.Version, &col.Description, &col.SkillsJSON,
+			&col.Created, &col.SyncedAt); err != nil {
+			return nil, err
+		}
+		collections = append(collections, col)
+	}
+	return collections, rows.Err()
+}
+
+// GetCollection returns a collection by name.
+func (s *Store) GetCollection(name string) (*Collection, error) {
+	var col Collection
+	err := s.db.QueryRow(
+		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections WHERE name = ?",
+		name,
+	).Scan(&col.ID, &col.Repository, &col.Tag, &col.Digest,
+		&col.Name, &col.Version, &col.Description, &col.SkillsJSON,
+		&col.Created, &col.SyncedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &col, nil
 }
