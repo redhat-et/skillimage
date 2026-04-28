@@ -19,8 +19,6 @@ const (
 	AnnotationTags          = "io.skillimage.tags"
 	AnnotationCompatibility = "io.skillimage.compatibility"
 	AnnotationWordCount     = "io.skillimage.wordcount"
-	AnnotationBundle       = "io.skillimage.bundle"
-	AnnotationBundleSkills = "io.skillimage.bundle.skills"
 )
 
 // buildAnnotations maps SkillCard fields to standard OCI annotation keys

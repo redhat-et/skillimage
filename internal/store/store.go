@@ -35,8 +35,6 @@ type Skill struct {
 	Compatibility string `json:"compatibility"`
 	WordCount     int    `json:"word_count"`
 	Created       string `json:"created"`
-	Bundle        bool   `json:"bundle"`
-	BundleSkills  string `json:"bundle_skills"`
 	SyncedAt      string `json:"synced_at"`
 }
 
@@ -93,8 +91,6 @@ func (s *Store) createSchema() error {
 			compatibility TEXT,
 			word_count    INTEGER DEFAULT 0,
 			created       TEXT,
-			bundle        INTEGER DEFAULT 0,
-			bundle_skills TEXT,
 			synced_at     TEXT NOT NULL,
 			UNIQUE(repository, tag)
 		);
@@ -111,8 +107,8 @@ func (s *Store) UpsertSkill(sk Skill) error {
 	_, err := s.db.Exec(`
 		INSERT INTO skills (repository, tag, digest, name, namespace, version,
 			status, display_name, description, authors, license, tags_json,
-			compatibility, word_count, created, bundle, bundle_skills, synced_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			compatibility, word_count, created, synced_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(repository, tag) DO UPDATE SET
 			digest=excluded.digest, name=excluded.name, namespace=excluded.namespace,
 			version=excluded.version, status=excluded.status,
@@ -120,19 +116,17 @@ func (s *Store) UpsertSkill(sk Skill) error {
 			authors=excluded.authors, license=excluded.license,
 			tags_json=excluded.tags_json, compatibility=excluded.compatibility,
 			word_count=excluded.word_count, created=excluded.created,
-			bundle=excluded.bundle, bundle_skills=excluded.bundle_skills,
 			synced_at=excluded.synced_at
 	`, sk.Repository, sk.Tag, sk.Digest, sk.Name, sk.Namespace, sk.Version,
 		sk.Status, sk.DisplayName, sk.Description, sk.Authors, sk.License,
-		sk.TagsJSON, sk.Compatibility, sk.WordCount, sk.Created,
-		sk.Bundle, sk.BundleSkills, sk.SyncedAt)
+		sk.TagsJSON, sk.Compatibility, sk.WordCount, sk.Created, sk.SyncedAt)
 	return err
 }
 
 // ListSkills returns skills matching the given filter criteria.
 func (s *Store) ListSkills(f ListFilter) ([]Skill, error) {
 	where, args := buildFilterClause(f)
-	query := "SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills" + where
+	query := "SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, synced_at FROM skills" + where
 	query += " ORDER BY namespace, name, created DESC"
 
 	if f.PerPage > 0 {
@@ -150,7 +144,7 @@ func (s *Store) ListSkills(f ListFilter) ([]Skill, error) {
 // GetSkill returns the latest version of a skill by namespace and name.
 func (s *Store) GetSkill(namespace, name string) (*Skill, error) {
 	skills, err := s.querySkills(
-		"SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills WHERE namespace = ? AND name = ? ORDER BY created DESC LIMIT 1",
+		"SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, synced_at FROM skills WHERE namespace = ? AND name = ? ORDER BY created DESC LIMIT 1",
 		namespace, name,
 	)
 	if err != nil {
@@ -165,7 +159,7 @@ func (s *Store) GetSkill(namespace, name string) (*Skill, error) {
 // GetVersions returns all versions of a skill by namespace and name.
 func (s *Store) GetVersions(namespace, name string) ([]Skill, error) {
 	return s.querySkills(
-		"SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, bundle, bundle_skills, synced_at FROM skills WHERE namespace = ? AND name = ? ORDER BY created DESC",
+		"SELECT id, repository, tag, digest, name, namespace, version, status, display_name, description, authors, license, tags_json, compatibility, word_count, created, synced_at FROM skills WHERE namespace = ? AND name = ? ORDER BY created DESC",
 		namespace, name,
 	)
 }
@@ -231,7 +225,7 @@ func (s *Store) querySkills(query string, args ...any) ([]Skill, error) {
 			&sk.Name, &sk.Namespace, &sk.Version, &sk.Status,
 			&sk.DisplayName, &sk.Description, &sk.Authors, &sk.License,
 			&sk.TagsJSON, &sk.Compatibility, &sk.WordCount, &sk.Created,
-			&sk.Bundle, &sk.BundleSkills, &sk.SyncedAt); err != nil {
+			&sk.SyncedAt); err != nil {
 			return nil, err
 		}
 		skills = append(skills, sk)
