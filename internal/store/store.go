@@ -304,7 +304,7 @@ func (s *Store) ListCollections() ([]Collection, error) {
 func (s *Store) GetCollection(name string) (*Collection, error) {
 	var col Collection
 	err := s.db.QueryRow(
-		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections WHERE name = ? ORDER BY created DESC LIMIT 1",
+		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections WHERE name = ? ORDER BY synced_at DESC, id DESC LIMIT 1",
 		name,
 	).Scan(&col.ID, &col.Repository, &col.Tag, &col.Digest,
 		&col.Name, &col.Version, &col.Description, &col.SkillsJSON,

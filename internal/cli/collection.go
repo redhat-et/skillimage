@@ -102,7 +102,7 @@ func resolveCollection(file string, args []string) (*collection.SkillCollection,
 	if len(args) == 0 {
 		return nil, fmt.Errorf("specify -f <file> or a registry reference")
 	}
-	return nil, fmt.Errorf("pulling collections from registry not yet supported in this command; use -f <file>")
+	return nil, fmt.Errorf("registry references not supported; use -f <file>")
 }
 
 func newCollectionVolumeCmd() *cobra.Command {

@@ -101,6 +101,7 @@ func (c *Client) PullCollection(ctx context.Context, ref string, opts PullOption
 		return nil, err
 	}
 
+	// Pull skills sequentially to limit concurrent network/disk I/O.
 	if opts.OutputDir != "" {
 		for _, skill := range col.Skills {
 			if _, err := c.Pull(ctx, skill.Image, PullOptions{
