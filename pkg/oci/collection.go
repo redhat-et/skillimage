@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -85,6 +86,67 @@ func (c *Client) BuildCollectionArtifact(ctx context.Context, yamlPath, ref stri
 // The artifact must already be built and stored locally.
 func (c *Client) PushCollection(ctx context.Context, ref string, opts PushOptions) error {
 	return c.Push(ctx, ref, opts)
+}
+
+// PullCollection fetches a collection artifact from a remote registry,
+// parses the YAML, and pulls each referenced skill image into outputDir.
+func (c *Client) PullCollection(ctx context.Context, ref string, outputDir string, opts PullOptions) (*collection.SkillCollection, error) {
+	if _, err := c.Pull(ctx, ref, PullOptions{SkipTLSVerify: opts.SkipTLSVerify}); err != nil {
+		return nil, fmt.Errorf("pulling collection artifact: %w", err)
+	}
+
+	col, err := c.extractCollectionYAML(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	if outputDir != "" {
+		for _, skill := range col.Skills {
+			if _, err := c.Pull(ctx, skill.Image, PullOptions{
+				OutputDir:     outputDir,
+				SkipTLSVerify: opts.SkipTLSVerify,
+			}); err != nil {
+				return nil, fmt.Errorf("pulling skill %s: %w", skill.Name, err)
+			}
+		}
+	}
+
+	return col, nil
+}
+
+func (c *Client) extractCollectionYAML(ctx context.Context, ref string) (*collection.SkillCollection, error) {
+	desc, err := c.store.Resolve(ctx, ref)
+	if err != nil {
+		return nil, fmt.Errorf("resolving %s: %w", ref, err)
+	}
+
+	rc, err := c.store.Fetch(ctx, desc)
+	if err != nil {
+		return nil, fmt.Errorf("fetching manifest: %w", err)
+	}
+	defer func() { _ = rc.Close() }()
+
+	manifestBytes, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, fmt.Errorf("reading manifest: %w", err)
+	}
+
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return nil, fmt.Errorf("parsing manifest: %w", err)
+	}
+
+	if len(manifest.Layers) == 0 {
+		return nil, fmt.Errorf("collection manifest has no layers")
+	}
+
+	layerRC, err := c.store.Fetch(ctx, manifest.Layers[0])
+	if err != nil {
+		return nil, fmt.Errorf("fetching collection layer: %w", err)
+	}
+	defer func() { _ = layerRC.Close() }()
+
+	return collection.Parse(layerRC)
 }
 
 // buildAndTagManifest creates an OCI manifest with the given config, layers,
