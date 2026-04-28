@@ -97,16 +97,13 @@ func (c *Client) buildAndTagManifest(
 	artifactType, ref string,
 ) (ocispec.Descriptor, error) {
 	manifest := ocispec.Manifest{
-		Versioned:   specs.Versioned{SchemaVersion: 2},
-		MediaType:   ocispec.MediaTypeImageManifest,
-		Config:      configDesc,
-		Layers:      layers,
-		Annotations: annotations,
+		Versioned:    specs.Versioned{SchemaVersion: 2},
+		MediaType:    ocispec.MediaTypeImageManifest,
+		ArtifactType: artifactType,
+		Config:       configDesc,
+		Layers:       layers,
+		Annotations:  annotations,
 	}
-
-	// OCI Image Manifest v1.0 doesn't have ArtifactType field.
-	// We use MediaType to distinguish artifact types. For collections,
-	// the layer media type is CollectionMediaType.
 
 	manifestBytes, err := json.Marshal(manifest)
 	if err != nil {
