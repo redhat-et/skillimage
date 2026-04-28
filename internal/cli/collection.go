@@ -16,6 +16,7 @@ func newCollectionCmd() *cobra.Command {
 	}
 	cmd.AddCommand(newCollectionPushCmd())
 	cmd.AddCommand(newCollectionPullCmd())
+	cmd.AddCommand(newCollectionVolumeCmd())
 	return cmd
 }
 
@@ -101,4 +102,30 @@ func resolveCollection(file string, args []string) (*collection.SkillCollection,
 		return nil, fmt.Errorf("specify -f <file> or a registry reference")
 	}
 	return nil, fmt.Errorf("pulling collections from registry not yet supported in this command; use -f <file>")
+}
+
+func newCollectionVolumeCmd() *cobra.Command {
+	var file string
+	var mountRoot string
+	var execute bool
+	cmd := &cobra.Command{
+		Use:   "volume [-f <file> | <ref>]",
+		Short: "Generate Podman volume commands from a collection",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			col, err := resolveCollection(file, args)
+			if err != nil {
+				return err
+			}
+			if execute {
+				fmt.Fprintf(cmd.OutOrStdout(), "# --execute is not yet implemented; printing commands instead:\n\n")
+			}
+			collection.GeneratePodmanVolumes(cmd.OutOrStdout(), col, mountRoot)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&file, "file", "f", "", "path to collection YAML file")
+	cmd.Flags().StringVar(&mountRoot, "mount-root", "/skills", "root mount path for volumes")
+	cmd.Flags().BoolVar(&execute, "execute", false, "run the commands instead of printing them")
+	return cmd
 }

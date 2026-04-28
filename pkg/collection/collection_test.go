@@ -1,6 +1,7 @@
 package collection_test
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -124,5 +125,26 @@ skills:
 	}
 	if col.Metadata.Name != "test-col" {
 		t.Errorf("name = %q, want %q", col.Metadata.Name, "test-col")
+	}
+}
+
+func TestGeneratePodmanVolumes(t *testing.T) {
+	col := &collection.SkillCollection{
+		Skills: []collection.SkillRef{
+			{Name: "skill-a", Image: "quay.io/org/skill-a:1.0.0"},
+			{Name: "skill-b", Image: "ghcr.io/org/skill-b:2.0.0"},
+		},
+	}
+	var buf bytes.Buffer
+	collection.GeneratePodmanVolumes(&buf, col, "/skills")
+	output := buf.String()
+	if !strings.Contains(output, "podman pull quay.io/org/skill-a:1.0.0") {
+		t.Errorf("missing pull command for skill-a")
+	}
+	if !strings.Contains(output, "podman volume create --driver image") {
+		t.Errorf("missing volume create command")
+	}
+	if !strings.Contains(output, "-v skill-a:/skills/skill-a:ro") {
+		t.Errorf("missing mount hint for skill-a in output:\n%s", output)
 	}
 }

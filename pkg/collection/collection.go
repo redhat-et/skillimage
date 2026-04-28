@@ -75,3 +75,35 @@ func Validate(col *SkillCollection) []string {
 	}
 	return errs
 }
+
+// GenerateKubeYAML writes Kubernetes partial pod spec (volumes + volumeMounts) to w.
+func GenerateKubeYAML(w io.Writer, col *SkillCollection, mountRoot string) {
+	fmt.Fprintln(w, "volumes:")
+	for _, s := range col.Skills {
+		fmt.Fprintf(w, "  - name: %s\n", s.Name)
+		fmt.Fprintf(w, "    image:\n")
+		fmt.Fprintf(w, "      reference: %s\n", s.Image)
+		fmt.Fprintf(w, "      pullPolicy: IfNotPresent\n")
+	}
+	fmt.Fprintln(w, "containers:")
+	fmt.Fprintln(w, "  - name: agent")
+	fmt.Fprintln(w, "    volumeMounts:")
+	for _, s := range col.Skills {
+		fmt.Fprintf(w, "      - name: %s\n", s.Name)
+		fmt.Fprintf(w, "        mountPath: %s/%s\n", mountRoot, s.Name)
+		fmt.Fprintf(w, "        readOnly: true\n")
+	}
+}
+
+// GeneratePodmanVolumes writes Podman volume creation commands to w.
+func GeneratePodmanVolumes(w io.Writer, col *SkillCollection, mountRoot string) {
+	for _, s := range col.Skills {
+		fmt.Fprintf(w, "podman pull %s\n", s.Image)
+		fmt.Fprintf(w, "podman volume create --driver image \\\n  --opt image=%s \\\n  %s\n\n", s.Image, s.Name)
+	}
+	fmt.Fprintf(w, "# Run with:\n# podman run --rm \\\n")
+	for _, s := range col.Skills {
+		fmt.Fprintf(w, "#   -v %s:%s/%s:ro \\\n", s.Name, mountRoot, s.Name)
+	}
+	fmt.Fprintf(w, "#   my-agent:latest\n")
+}
