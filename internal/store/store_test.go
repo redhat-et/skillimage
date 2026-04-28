@@ -301,7 +301,7 @@ func TestUpsertAndListCollections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	col := store.Collection{
 		Repository:  "quay.io/myorg/collections/hr-skills",
@@ -335,7 +335,7 @@ func TestGetCollection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	col := store.Collection{
 		Repository:  "quay.io/myorg/collections/hr-skills",
@@ -365,7 +365,7 @@ func TestGetCollectionNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.GetCollection("nonexistent")
 	if !errors.Is(err, store.ErrNotFound) {

@@ -15,7 +15,7 @@ func TestCollectionsList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	col := store.Collection{
 		Repository:  "quay.io/org/collections/hr",
@@ -59,7 +59,7 @@ func TestCollectionsGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	col := store.Collection{
 		Repository:  "quay.io/org/collections/hr",
@@ -90,7 +90,7 @@ func TestCollectionsGetNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	h := handler.NewCollectionsHandler(db)
 	req := httptest.NewRequest("GET", "/api/v1/collections/missing", nil)
