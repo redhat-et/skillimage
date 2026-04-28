@@ -17,6 +17,7 @@ func newCollectionCmd() *cobra.Command {
 	cmd.AddCommand(newCollectionPushCmd())
 	cmd.AddCommand(newCollectionPullCmd())
 	cmd.AddCommand(newCollectionVolumeCmd())
+	cmd.AddCommand(newCollectionGenerateCmd())
 	return cmd
 }
 
@@ -127,5 +128,26 @@ func newCollectionVolumeCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&file, "file", "f", "", "path to collection YAML file")
 	cmd.Flags().StringVar(&mountRoot, "mount-root", "/skills", "root mount path for volumes")
 	cmd.Flags().BoolVar(&execute, "execute", false, "run the commands instead of printing them")
+	return cmd
+}
+
+func newCollectionGenerateCmd() *cobra.Command {
+	var file string
+	var mountRoot string
+	cmd := &cobra.Command{
+		Use:   "generate [-f <file> | <ref>]",
+		Short: "Generate Kubernetes volume YAML from a collection",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			col, err := resolveCollection(file, args)
+			if err != nil {
+				return err
+			}
+			collection.GenerateKubeYAML(cmd.OutOrStdout(), col, mountRoot)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&file, "file", "f", "", "path to collection YAML file")
+	cmd.Flags().StringVar(&mountRoot, "mount-root", "/skills", "root mount path for volumes")
 	return cmd
 }

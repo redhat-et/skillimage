@@ -148,3 +148,38 @@ func TestGeneratePodmanVolumes(t *testing.T) {
 		t.Errorf("missing mount hint for skill-a in output:\n%s", output)
 	}
 }
+
+func TestGenerateKubeYAML(t *testing.T) {
+	col := &collection.SkillCollection{
+		Skills: []collection.SkillRef{
+			{Name: "skill-a", Image: "quay.io/org/skill-a:1.0.0"},
+			{Name: "skill-b", Image: "ghcr.io/org/skill-b:2.0.0"},
+		},
+	}
+	var buf bytes.Buffer
+	collection.GenerateKubeYAML(&buf, col, "/skills")
+	output := buf.String()
+	if !strings.Contains(output, "reference: quay.io/org/skill-a:1.0.0") {
+		t.Errorf("missing image reference for skill-a")
+	}
+	if !strings.Contains(output, "mountPath: /skills/skill-a") {
+		t.Errorf("missing mountPath for skill-a")
+	}
+	if !strings.Contains(output, "readOnly: true") {
+		t.Errorf("missing readOnly")
+	}
+}
+
+func TestGenerateKubeYAMLCustomMountRoot(t *testing.T) {
+	col := &collection.SkillCollection{
+		Skills: []collection.SkillRef{
+			{Name: "skill-a", Image: "quay.io/org/skill-a:1.0.0"},
+		},
+	}
+	var buf bytes.Buffer
+	collection.GenerateKubeYAML(&buf, col, "/agent/skills")
+	output := buf.String()
+	if !strings.Contains(output, "mountPath: /agent/skills/skill-a") {
+		t.Errorf("expected custom mount root, got:\n%s", output)
+	}
+}
