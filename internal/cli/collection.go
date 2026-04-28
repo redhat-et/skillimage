@@ -80,7 +80,7 @@ func runCollectionPull(cmd *cobra.Command, ref, outputDir string, skipTLSVerify 
 		return err
 	}
 
-	col, err := client.PullCollection(context.Background(), ref, outputDir, oci.PullOptions{
+	col, err := client.PullCollection(context.Background(), ref, oci.PullOptions{
 		OutputDir:     outputDir,
 		SkipTLSVerify: skipTLSVerify,
 	})

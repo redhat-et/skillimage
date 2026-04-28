@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	godigest "github.com/opencontainers/go-digest"
@@ -36,7 +37,7 @@ func (c *Client) BuildCollectionArtifact(ctx context.Context, yamlPath, ref stri
 
 	validationErrors := collection.Validate(col)
 	if len(validationErrors) > 0 {
-		return ocispec.Descriptor{}, fmt.Errorf("validation failed: %v", validationErrors)
+		return ocispec.Descriptor{}, fmt.Errorf("validation failed: %s", strings.Join(validationErrors, "; "))
 	}
 
 	// 2. Read the YAML file bytes.
@@ -89,8 +90,8 @@ func (c *Client) PushCollection(ctx context.Context, ref string, opts PushOption
 }
 
 // PullCollection fetches a collection artifact from a remote registry,
-// parses the YAML, and pulls each referenced skill image into outputDir.
-func (c *Client) PullCollection(ctx context.Context, ref string, outputDir string, opts PullOptions) (*collection.SkillCollection, error) {
+// parses the YAML, and pulls each referenced skill image into opts.OutputDir.
+func (c *Client) PullCollection(ctx context.Context, ref string, opts PullOptions) (*collection.SkillCollection, error) {
 	if _, err := c.Pull(ctx, ref, PullOptions{SkipTLSVerify: opts.SkipTLSVerify}); err != nil {
 		return nil, fmt.Errorf("pulling collection artifact: %w", err)
 	}
@@ -100,10 +101,10 @@ func (c *Client) PullCollection(ctx context.Context, ref string, outputDir strin
 		return nil, err
 	}
 
-	if outputDir != "" {
+	if opts.OutputDir != "" {
 		for _, skill := range col.Skills {
 			if _, err := c.Pull(ctx, skill.Image, PullOptions{
-				OutputDir:     outputDir,
+				OutputDir:     opts.OutputDir,
 				SkipTLSVerify: opts.SkipTLSVerify,
 			}); err != nil {
 				return nil, fmt.Errorf("pulling skill %s: %w", skill.Name, err)
@@ -136,8 +137,16 @@ func (c *Client) extractCollectionYAML(ctx context.Context, ref string) (*collec
 		return nil, fmt.Errorf("parsing manifest: %w", err)
 	}
 
+	if manifest.ArtifactType != CollectionArtifactType {
+		return nil, fmt.Errorf("ref %s is not a collection artifact (artifactType=%s)", ref, manifest.ArtifactType)
+	}
+
 	if len(manifest.Layers) == 0 {
 		return nil, fmt.Errorf("collection manifest has no layers")
+	}
+
+	if manifest.Layers[0].MediaType != CollectionMediaType {
+		return nil, fmt.Errorf("unexpected layer media type %s, expected %s", manifest.Layers[0].MediaType, CollectionMediaType)
 	}
 
 	layerRC, err := c.store.Fetch(ctx, manifest.Layers[0])

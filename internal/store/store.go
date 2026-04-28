@@ -124,6 +124,7 @@ func (s *Store) createSchema() error {
 			synced_at   TEXT NOT NULL,
 			UNIQUE(repository, tag)
 		);
+		CREATE INDEX IF NOT EXISTS idx_collections_name ON collections(name);
 	`)
 	return err
 }
@@ -303,7 +304,7 @@ func (s *Store) ListCollections() ([]Collection, error) {
 func (s *Store) GetCollection(name string) (*Collection, error) {
 	var col Collection
 	err := s.db.QueryRow(
-		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections WHERE name = ?",
+		"SELECT id, repository, tag, digest, name, version, description, skills_json, created, synced_at FROM collections WHERE name = ? ORDER BY created DESC LIMIT 1",
 		name,
 	).Scan(&col.ID, &col.Repository, &col.Tag, &col.Digest,
 		&col.Name, &col.Version, &col.Description, &col.SkillsJSON,
