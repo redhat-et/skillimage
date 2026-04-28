@@ -20,6 +20,7 @@ func NewRouter(db *store.Store, syncFn func(), contentCfg handler.ContentConfig)
 	r.Use(middleware.Recoverer)
 
 	skills := handler.NewSkillsHandler(db, contentCfg)
+	collections := handler.NewCollectionsHandler(db)
 	syncH := handler.NewSyncHandler(syncFn)
 	healthH := handler.NewHealthHandler()
 
@@ -39,6 +40,10 @@ func NewRouter(db *store.Store, syncFn func(), contentCfg handler.ContentConfig)
 			skills.Content(w, r, chi.URLParam(r, "ns"), chi.URLParam(r, "name"), chi.URLParam(r, "ver"))
 		})
 		r.Post("/sync", syncH.Trigger)
+		r.Get("/collections", collections.List)
+		r.Get("/collections/{name}", func(w http.ResponseWriter, r *http.Request) {
+			collections.Get(w, r, chi.URLParam(r, "name"))
+		})
 	})
 
 	r.Get("/healthz", healthH.Check)
