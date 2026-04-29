@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Image - Agent Deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #151515;
+    --surface: #1f1f1f;
+    --surface-hover: #292929;
+    --border: #383838;
+    --border-active: #ee0000;
+    --text: #ffffff;
+    --text-muted: #c7c7c7;
+    --text-dim: #707070;
+    --accent: #ee0000;
+    --accent-hover: #f56e6e;
+    --green: #63993d;
+    --green-dim: rgba(99,153,61,0.18);
+    --yellow: #dca614;
+    --yellow-dim: rgba(220,166,20,0.18);
+    --orange: #f5921b;
+    --orange-dim: rgba(245,146,27,0.18);
+    --purple: #876fd4;
+    --purple-dim: rgba(135,111,212,0.18);
+    --red: #ee0000;
+    --teal: #37a3a3;
+    --teal-dim: rgba(55,163,163,0.18);
+    --blue: #0066cc;
+    --radius: 3px;
+    --radius-sm: 3px;
+    --radius-pill: 64px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Red Hat Text', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    font-weight: 400;
+  }
+
+  header {
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-left: auto;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 40px;
+  }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 36px;
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .step-indicator.active {
+    background: rgba(238,0,0,0.1);
+    color: var(--accent);
+    border-color: rgba(238,0,0,0.3);
+  }
+
+  .step-indicator.completed {
+    color: var(--green);
+  }
+
+  .step-indicator.upcoming {
+    color: var(--text-dim);
+  }
+
+  .step-indicator .num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid currentColor;
+  }
+
+  .step-indicator.completed .num {
+    background: var(--green);
+    color: var(--bg);
+    border-color: var(--green);
+  }
+
+  .step-connector {
+    flex: 0;
+    width: 32px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Step panels */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  .step-panel h2 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .step-panel .step-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .card:hover {
+    background: var(--surface-hover);
+    border-color: #3a3e50;
+  }
+
+  .card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(238,0,0,0.08);
+  }
+
+  .card .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .card .card-name {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .card .card-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .card .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Badges */
+  .badge {
+    font-family: 'Red Hat Text', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-category {
+    background: var(--purple-dim);
+    color: var(--purple);
+  }
+
+  .badge-status-draft {
+    background: var(--yellow-dim);
+    color: var(--yellow);
+  }
+
+  .badge-status-testing {
+    background: var(--teal-dim);
+    color: var(--teal);
+  }
+
+  .badge-status-published {
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .badge-recommended {
+    background: rgba(238,0,0,0.12);
+    color: var(--accent-hover);
+  }
+
+  .badge-version {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .badge-tools {
+    background: var(--orange-dim);
+    color: var(--orange);
+  }
+
+  /* Prompt preview */
+  .prompt-preview {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .prompt-toggle {
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+
+  .prompt-toggle:hover { color: var(--accent-hover); }
+
+  .prompt-text {
+    display: none;
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: 'Red Hat Mono', monospace;
+    color: var(--text-muted);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .prompt-text.visible { display: block; }
+
+  /* Image ref */
+  .image-ref {
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-family: 'Red Hat Mono', monospace;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Checkbox indicator */
+  .check-indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .card.selected .check-indicator {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .check-indicator svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card.selected .check-indicator svg { opacity: 1; }
+
+  /* Radio indicator */
+  .radio-indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .card.selected .radio-indicator {
+    border-color: var(--accent);
+  }
+
+  .radio-indicator .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card.selected .radio-indicator .dot { opacity: 1; }
+
+  /* Navigation */
+  .nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    font-family: 'Red Hat Text', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: #a60000; }
+
+  .btn-primary:disabled {
+    background: var(--surface-hover);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .btn-ghost {
+    background: none;
+    color: var(--text-muted);
+  }
+
+  .btn-ghost:hover { color: var(--text); }
+
+  /* Summary sidebar in step 3 */
+  .step3-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .summary-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: sticky;
+    top: 24px;
+  }
+
+  .summary-panel h3 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+
+  .summary-item {
+    margin-bottom: 14px;
+  }
+
+  .summary-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .summary-value {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .summary-skills {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .summary-skills li {
+    font-size: 13px;
+    padding: 4px 0;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .summary-skills li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .summary-empty {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* Output panel */
+  .output-panel {
+    display: none;
+    margin-top: 32px;
+  }
+
+  .output-panel.visible { display: block; }
+
+  .output-panel h2 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .output-panel .step-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .yaml-section {
+    margin-bottom: 20px;
+  }
+
+  .yaml-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .yaml-header h3 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .btn-copy {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .btn-copy:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .btn-copy.copied {
+    background: var(--green-dim);
+    color: var(--green);
+    border-color: rgba(99,153,61,0.4);
+  }
+
+  .yaml-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-family: 'Red Hat Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text-muted);
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  /* Category groups in skills step */
+  .category-group {
+    margin-bottom: 28px;
+  }
+
+  .category-group h3 {
+    font-family: 'Red Hat Display', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Selection count */
+  .selection-count {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .selection-count strong {
+    color: var(--accent);
+  }
+
+  @media (max-width: 900px) {
+    .step3-layout {
+      grid-template-columns: 1fr;
+    }
+    .summary-panel {
+      position: static;
+    }
+    .container { padding: 20px; }
+    header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Skill Image</span> Agent Deployment</h1>
+  <div class="subtitle">Assemble and deploy AI agents on OpenShift</div>
+</header>
+
+<div class="container">
+  <!-- Stepper -->
+  <div class="stepper" id="stepper">
+    <div class="step-indicator active" data-step="1" onclick="goToStep(1)">
+      <div class="num">1</div>
+      Agent Base
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-indicator upcoming" data-step="2" onclick="goToStep(2)">
+      <div class="num">2</div>
+      System Prompt
+    </div>
+    <div class="step-connector"></div>
+    <div class="step-indicator upcoming" data-step="3" onclick="goToStep(3)">
+      <div class="num">3</div>
+      Skills
+    </div>
+  </div>
+
+  <!-- Step 1: Agent Base -->
+  <div class="step-panel active" id="step-1">
+    <h2>Choose an agent base</h2>
+    <p class="step-desc">Select the generic agent runtime. This container image provides the LLM integration, tool execution, and A2A protocol support.</p>
+    <div class="cards" id="agent-cards"></div>
+    <div class="nav-bar">
+      <div></div>
+      <button class="btn btn-primary" onclick="nextStep()" id="btn-next-1" disabled>Next: System Prompt</button>
+    </div>
+  </div>
+
+  <!-- Step 2: System Prompt -->
+  <div class="step-panel" id="step-2">
+    <h2>Choose a system prompt</h2>
+    <p class="step-desc">The system prompt defines the agent's specialty and personality. Each prompt configures which tools the agent can use and how it should behave.</p>
+    <div class="cards" id="persona-cards"></div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+      <button class="btn btn-primary" onclick="nextStep()" id="btn-next-2" disabled>Next: Select Skills</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Skills -->
+  <div class="step-panel" id="step-3">
+    <h2>Select skills</h2>
+    <p class="step-desc">
+      Choose skills to mount as OCI image volumes. Each skill is a signed, versioned artifact pulled from the registry at deploy time.
+      <span class="selection-count" id="skill-count"></span>
+    </p>
+    <div class="step3-layout">
+      <div id="skill-groups"></div>
+      <div class="summary-panel">
+        <h3>Configuration</h3>
+        <div class="summary-item">
+          <div class="summary-label">Agent Base</div>
+          <div class="summary-value" id="sum-agent">-</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Persona</div>
+          <div class="summary-value" id="sum-persona">-</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Skills</div>
+          <ul class="summary-skills" id="sum-skills"></ul>
+          <div class="summary-empty" id="sum-skills-empty">No skills selected</div>
+        </div>
+        <button class="btn btn-primary" onclick="generateManifests()" style="width:100%; margin-top: 16px;" id="btn-generate">Generate Manifests</button>
+      </div>
+    </div>
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="prevStep()">Back</button>
+      <button class="btn btn-primary" onclick="generateManifests()">Generate Manifests</button>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-panel" id="output-panel">
+    <h2>Deployment manifests</h2>
+    <p class="step-desc">Apply these manifests to your OpenShift cluster. The ConfigMap defines the agent's persona; the Deployment mounts skills as OCI image volumes.</p>
+
+    <div class="yaml-section">
+      <div class="yaml-header">
+        <h3>ConfigMap</h3>
+        <button class="btn-copy" onclick="copyYaml('configmap-yaml', this)">Copy</button>
+      </div>
+      <div class="yaml-block" id="configmap-yaml"></div>
+    </div>
+
+    <div class="yaml-section">
+      <div class="yaml-header">
+        <h3>Deployment</h3>
+        <button class="btn-copy" onclick="copyYaml('deployment-yaml', this)">Copy</button>
+      </div>
+      <div class="yaml-block" id="deployment-yaml"></div>
+    </div>
+
+    <div class="nav-bar">
+      <button class="btn btn-ghost" onclick="backToSkills()">Back to Skills</button>
+      <button class="btn btn-secondary" onclick="copyAll()">Copy All Manifests</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- DATA ----
+
+const AGENTS = [
+  {
+    id: 'docsclaw',
+    name: 'DocsClaw',
+    image: 'ghcr.io/redhat-et/docsclaw:602ac9a',
+    description: 'ConfigMap-driven agentic runtime. Converts any LLM into a tool-using, A2A-compatible agent. ~5 MiB per pod.',
+    resources: 'CPU 100m-500m, Memory 64Mi-256Mi',
+    features: ['Tool-use loops', 'A2A protocol', 'Skill discovery', 'Multi-provider (Anthropic, OpenAI, LiteLLM)']
+  }
+];
+
+const PERSONAS = [
+  {
+    id: 'executive-assistant',
+    name: 'Executive Assistant',
+    description: 'Summarizes documents and reports for executive review. Adapts output to audience level (VP, team lead, standup).',
+    tools: ['read_file', 'write_file', 'web_fetch'],
+    maxIterations: 5,
+    prompt: `You are an executive assistant AI deployed by the CTO office.
+
+Your job is to help busy leaders process information quickly.
+When given documents, reports, or meeting notes, produce
+structured summaries that surface decisions, risks, and
+action items.
+
+Adapt your output to the audience:
+- For VP-level: focus on business impact and decisions needed
+- For team leads: include technical context and timelines
+- For standup updates: keep it under 5 bullet points
+
+When a task matches a known skill, load it first for guidance.
+Be concise. Executives do not read walls of text.`,
+    recommendedSkills: ['document-summarizer', 'meeting-notes-processor', 'email-drafter', 'briefing-builder']
+  },
+  {
+    id: 'hr-analyst',
+    name: 'HR Analyst',
+    description: 'Reviews HR documents with a critical eye: resumes, policies, onboarding checklists. Structured, severity-based feedback.',
+    tools: ['read_file', 'write_file'],
+    maxIterations: 5,
+    prompt: `You are an HR analyst AI supporting the talent acquisition
+and HR operations teams.
+
+Your job is to review HR documents with a critical eye:
+- Resumes: evaluate against job requirements, flag strengths
+  and gaps, provide a fit score with justification
+- Policies: check for completeness, consistency with labor
+  regulations, and clarity for employees
+- Onboarding checklists: verify coverage of required steps,
+  consistency across departments
+
+Always provide structured, actionable feedback. HR decisions
+affect people's careers — be thorough but fair. Flag genuine
+gaps without bias toward pedigree or background.
+
+When a task matches a known skill, load it first for guidance.
+Organize findings by severity: Critical, Important, Suggestion.`,
+    recommendedSkills: ['document-reviewer', 'resume-screener', 'policy-comparator', 'checklist-auditor']
+  }
+];
+
+const SKILLS = [
+  {
+    id: 'document-summarizer',
+    name: 'Document Summarizer',
+    image: 'quay.io/skillimage/business/document-summarizer:1.0.0-testing',
+    description: 'Produces structured summaries of technical documents, reports, and meeting notes.',
+    category: 'business',
+    version: '1.0.0',
+    status: 'testing',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'document-reviewer',
+    name: 'Document Reviewer',
+    image: 'quay.io/skillimage/business/document-reviewer:1.0.0-draft',
+    description: 'Reviews documents for clarity, completeness, and consistency with structured severity-based feedback.',
+    category: 'business',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'meeting-notes-processor',
+    name: 'Meeting Notes Processor',
+    image: 'quay.io/skillimage/business/meeting-notes-processor:1.0.0-draft',
+    description: 'Extracts action items, decisions, and follow-ups from meeting notes. Assigns owners and deadlines when mentioned.',
+    category: 'business',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'email-drafter',
+    name: 'Email Drafter',
+    image: 'quay.io/skillimage/business/email-drafter:1.0.0-draft',
+    description: 'Composes professional email responses based on context and recipient seniority. Adjusts tone and detail level.',
+    category: 'business',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'briefing-builder',
+    name: 'Briefing Builder',
+    image: 'quay.io/skillimage/business/briefing-builder:1.0.0-draft',
+    description: 'Compiles executive briefings from multiple source documents. Highlights key decisions, risks, and recommendations.',
+    category: 'business',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'resume-screener',
+    name: 'Resume Screener',
+    image: 'quay.io/skillimage/hr/resume-screener:1.0.0-draft',
+    description: 'Screens resumes against a job description. Scores candidates on qualification alignment, experience match, and fit.',
+    category: 'hr',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'policy-comparator',
+    name: 'Policy Comparator',
+    image: 'quay.io/skillimage/hr/policy-comparator:1.0.0-draft',
+    description: 'Compares policy documents side by side. Produces a structured comparison matrix against a baseline.',
+    category: 'hr',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'checklist-auditor',
+    name: 'Checklist Auditor',
+    image: 'quay.io/skillimage/hr/checklist-auditor:1.0.0-draft',
+    description: 'Audits checklists for consistency against a corporate standard. Identifies gaps, inconsistencies, and missing steps.',
+    category: 'hr',
+    version: '1.0.0',
+    status: 'draft',
+    authors: 'OCTO Team'
+  },
+  {
+    id: 'api-tester',
+    name: 'API Tester',
+    image: 'quay.io/skillimage/devops/api-tester:0.1.0-draft',
+    description: 'Tests API endpoints for correctness, latency, and error handling. Generates structured test reports.',
+    category: 'devops',
+    version: '0.1.0',
+    status: 'draft',
+    authors: 'Community'
+  },
+  {
+    id: 'git-assistant',
+    name: 'Git Assistant',
+    image: 'quay.io/skillimage/tools/git-assistant:0.2.0-draft',
+    description: 'Helps with Git workflows: branch management, commit message drafting, merge conflict resolution.',
+    category: 'tools',
+    version: '0.2.0',
+    status: 'draft',
+    authors: 'ZeroClaw Labs'
+  },
+  {
+    id: 'security-scanner',
+    name: 'Security Scanner',
+    image: 'quay.io/skillimage/security/security-scanner:0.1.1-draft',
+    description: 'Scans code and configuration for common security vulnerabilities. Maps findings to CWE and OWASP categories.',
+    category: 'security',
+    version: '0.1.1',
+    status: 'draft',
+    authors: 'Community'
+  },
+  {
+    id: 'knowledge-base',
+    name: 'Knowledge Base',
+    image: 'quay.io/skillimage/research/knowledge-base:0.3.0-draft',
+    description: 'Searches and synthesizes information from structured knowledge bases. Returns sourced, cited answers.',
+    category: 'research',
+    version: '0.3.0',
+    status: 'draft',
+    authors: 'ZeroClaw Labs'
+  }
+];
+
+const CATEGORY_LABELS = {
+  business: 'Business',
+  hr: 'Human Resources',
+  devops: 'DevOps',
+  tools: 'Tools',
+  security: 'Security',
+  research: 'Research'
+};
+
+// ---- STATE ----
+
+let currentStep = 1;
+let selectedAgent = null;
+let selectedPersona = null;
+const selectedSkills = new Set();
+
+// ---- RENDERING ----
+
+function renderAgents() {
+  const container = document.getElementById('agent-cards');
+  container.innerHTML = AGENTS.map(a => `
+    <div class="card ${selectedAgent === a.id ? 'selected' : ''}" onclick="selectAgent('${a.id}')">
+      <div class="card-header">
+        <div class="card-name">${a.name}</div>
+        <div class="radio-indicator"><div class="dot"></div></div>
+      </div>
+      <div class="card-desc">${a.description}</div>
+      <div class="card-meta">
+        ${a.features.map(f => `<span class="badge badge-version">${f}</span>`).join('')}
+      </div>
+      <div class="image-ref">${a.image}</div>
+    </div>
+  `).join('');
+}
+
+function renderPersonas() {
+  const container = document.getElementById('persona-cards');
+  container.innerHTML = PERSONAS.map(p => `
+    <div class="card ${selectedPersona === p.id ? 'selected' : ''}" onclick="selectPersona('${p.id}')">
+      <div class="card-header">
+        <div class="card-name">${p.name}</div>
+        <div class="radio-indicator"><div class="dot"></div></div>
+      </div>
+      <div class="card-desc">${p.description}</div>
+      <div class="card-meta">
+        ${p.tools.map(t => `<span class="badge badge-tools">${t}</span>`).join('')}
+      </div>
+      <div class="prompt-preview">
+        <button class="prompt-toggle" onclick="event.stopPropagation(); togglePrompt('${p.id}')">
+          <span id="prompt-arrow-${p.id}">▶</span> Preview system prompt
+        </button>
+        <div class="prompt-text" id="prompt-${p.id}">${escapeHtml(p.prompt)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderSkills() {
+  const groups = {};
+  for (const s of SKILLS) {
+    if (!groups[s.category]) groups[s.category] = [];
+    groups[s.category].push(s);
+  }
+
+  const persona = PERSONAS.find(p => p.id === selectedPersona);
+  const recommended = persona ? persona.recommendedSkills : [];
+  const categoryOrder = ['business', 'hr', 'devops', 'tools', 'security', 'research'];
+
+  const container = document.getElementById('skill-groups');
+  container.innerHTML = categoryOrder
+    .filter(cat => groups[cat])
+    .map(cat => `
+      <div class="category-group">
+        <h3>${CATEGORY_LABELS[cat] || cat}</h3>
+        <div class="cards">
+          ${groups[cat].map(s => `
+            <div class="card ${selectedSkills.has(s.id) ? 'selected' : ''}" onclick="toggleSkill('${s.id}')">
+              <div class="card-header">
+                <div class="card-name">${s.name}</div>
+                <div class="check-indicator">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2,6 5,9 10,3"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="card-desc">${s.description}</div>
+              <div class="card-meta">
+                <span class="badge badge-category">${s.category}</span>
+                <span class="badge badge-version">v${s.version}</span>
+                <span class="badge badge-status-${s.status}">${s.status}</span>
+                ${recommended.includes(s.id) ? '<span class="badge badge-recommended">Recommended</span>' : ''}
+              </div>
+              <div class="image-ref">${s.image}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+  updateSkillCount();
+  updateSummary();
+}
+
+function updateSkillCount() {
+  const el = document.getElementById('skill-count');
+  if (selectedSkills.size > 0) {
+    el.innerHTML = `— <strong>${selectedSkills.size}</strong> selected`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function updateSummary() {
+  const agent = AGENTS.find(a => a.id === selectedAgent);
+  const persona = PERSONAS.find(p => p.id === selectedPersona);
+
+  document.getElementById('sum-agent').textContent = agent ? agent.name : '-';
+  document.getElementById('sum-persona').textContent = persona ? persona.name : '-';
+
+  const skillsList = document.getElementById('sum-skills');
+  const skillsEmpty = document.getElementById('sum-skills-empty');
+
+  if (selectedSkills.size > 0) {
+    skillsList.innerHTML = Array.from(selectedSkills)
+      .map(id => SKILLS.find(s => s.id === id))
+      .filter(Boolean)
+      .map(s => `<li>${s.name}</li>`)
+      .join('');
+    skillsList.style.display = 'block';
+    skillsEmpty.style.display = 'none';
+  } else {
+    skillsList.style.display = 'none';
+    skillsEmpty.style.display = 'block';
+  }
+}
+
+// ---- INTERACTIONS ----
+
+function selectAgent(id) {
+  selectedAgent = id;
+  renderAgents();
+  document.getElementById('btn-next-1').disabled = false;
+}
+
+function selectPersona(id) {
+  selectedPersona = id;
+  renderPersonas();
+  document.getElementById('btn-next-2').disabled = false;
+}
+
+function toggleSkill(id) {
+  if (selectedSkills.has(id)) {
+    selectedSkills.delete(id);
+  } else {
+    selectedSkills.add(id);
+  }
+  renderSkills();
+}
+
+function togglePrompt(id) {
+  const text = document.getElementById(`prompt-${id}`);
+  const arrow = document.getElementById(`prompt-arrow-${id}`);
+  text.classList.toggle('visible');
+  arrow.textContent = text.classList.contains('visible') ? '▼' : '▶';
+}
+
+// ---- NAVIGATION ----
+
+function goToStep(step) {
+  if (step > currentStep) return;
+  currentStep = step;
+  updateUI();
+}
+
+function nextStep() {
+  if (currentStep < 3) {
+    currentStep++;
+    updateUI();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    updateUI();
+  }
+}
+
+function backToSkills() {
+  document.getElementById('output-panel').classList.remove('visible');
+  document.getElementById('step-3').classList.add('active');
+}
+
+function updateUI() {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`step-${currentStep}`).classList.add('active');
+  document.getElementById('output-panel').classList.remove('visible');
+
+  document.querySelectorAll('.step-indicator').forEach(ind => {
+    const step = parseInt(ind.dataset.step);
+    ind.className = 'step-indicator';
+    if (step < currentStep) ind.classList.add('completed');
+    else if (step === currentStep) ind.classList.add('active');
+    else ind.classList.add('upcoming');
+  });
+
+  if (currentStep === 2) renderPersonas();
+  if (currentStep === 3) {
+    renderSkills();
+    updateSummary();
+  }
+}
+
+// ---- YAML GENERATION ----
+
+function indent(text, spaces) {
+  const pad = ' '.repeat(spaces);
+  return text.split('\n').map(line => line ? pad + line : line).join('\n');
+}
+
+function generateManifests() {
+  const agent = AGENTS.find(a => a.id === selectedAgent);
+  const persona = PERSONAS.find(p => p.id === selectedPersona);
+  if (!agent || !persona) return;
+
+  const skills = Array.from(selectedSkills)
+    .map(id => SKILLS.find(s => s.id === id))
+    .filter(Boolean);
+
+  const agentName = persona.id;
+
+  // ConfigMap
+  const agentCard = {
+    name: agentName,
+    description: persona.description,
+    version: '1.0.0',
+    protocolVersion: '0.3.0',
+    url: `http://${agentName}:8000`,
+    skills: skills.map(s => ({
+      id: s.id,
+      name: s.name,
+      description: s.description
+    })),
+    capabilities: {},
+    defaultInputModes: ['application/json'],
+    defaultOutputModes: ['text/plain']
+  };
+
+  const agentConfig = [
+    'tools:',
+    '  allowed:',
+    ...persona.tools.map(t => `    - ${t}`),
+    '  workspace: /tmp/agent-workspace',
+    'loop:',
+    `  max_iterations: ${persona.maxIterations}`
+  ].join('\n');
+
+  const configMap = [
+    'apiVersion: v1',
+    'kind: ConfigMap',
+    'metadata:',
+    `  name: ${agentName}-config`,
+    '  labels:',
+    `    app: ${agentName}`,
+    'data:',
+    '  system-prompt.txt: |',
+    indent(persona.prompt, 4),
+    '  agent-config.yaml: |',
+    indent(agentConfig, 4),
+    '  agent-card.json: |',
+    indent(JSON.stringify(agentCard, null, 2), 4),
+  ].join('\n');
+
+  // Deployment
+  const volumeMounts = [
+    '            - name: agent-config',
+    '              mountPath: /config/agent',
+    '              readOnly: true',
+    ...skills.map(s => [
+      `            - name: skill-${s.id}`,
+      `              mountPath: /config/agent/skills/${s.id}`,
+      '              readOnly: true'
+    ].join('\n')),
+    '            - name: workspace',
+    '              mountPath: /tmp/agent-workspace'
+  ].join('\n');
+
+  const volumes = [
+    '        - name: agent-config',
+    '          configMap:',
+    `            name: ${agentName}-config`,
+    ...skills.map(s => [
+      `        - name: skill-${s.id}`,
+      '          image:',
+      `            reference: ${s.image}`,
+      '            pullPolicy: IfNotPresent'
+    ].join('\n')),
+    '        - name: workspace',
+    '          emptyDir: {}'
+  ].join('\n');
+
+  const deployment = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${agentName}
+  labels:
+    app: ${agentName}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${agentName}
+  template:
+    metadata:
+      labels:
+        app: ${agentName}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: docsclaw-agent
+      containers:
+        - name: docsclaw
+          image: ${agent.image}
+          args:
+            - serve
+            - --config-dir
+            - /config/agent
+            - --listen-plain-http
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8100
+              name: health
+          envFrom:
+            - secretRef:
+                name: llm-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+${volumeMounts}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: health
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+${volumes}`;
+
+  document.getElementById('configmap-yaml').textContent = configMap;
+  document.getElementById('deployment-yaml').textContent = deployment;
+
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('output-panel').classList.add('visible');
+  document.getElementById('output-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---- CLIPBOARD ----
+
+function copyYaml(elementId, btn) {
+  const text = document.getElementById(elementId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function copyAll() {
+  const cm = document.getElementById('configmap-yaml').textContent;
+  const dep = document.getElementById('deployment-yaml').textContent;
+  navigator.clipboard.writeText(cm + '\n---\n' + dep);
+}
+
+// ---- UTILS ----
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ---- INIT ----
+
+renderAgents();
+// Pre-select the only agent
+selectAgent('docsclaw');
+</script>
+</body>
+</html>

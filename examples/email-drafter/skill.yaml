@@ -1,0 +1,39 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: email-drafter
+  namespace: examples
+  version: 1.0.0
+  display-name: "Email Drafter"
+  description: >
+    Composes professional email responses based on context and
+    recipient. Adjusts tone, detail level, and formality to
+    match the audience and purpose.
+  license: Apache-2.0
+  tags:
+    - email
+    - communication
+    - productivity
+  compatibility: claude-3.5-sonnet
+  authors:
+    - name: OCTO Team
+      email: octo@redhat.com
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Draft a reply to the VP asking for a project status update."
+      output: |
+        Subject: Re: Q2 Platform Migration Status
+
+        Hi Sarah,
+
+        Quick update on the platform migration:
+
+        - Authentication service: migrated and in production (2 weeks ahead)
+        - Data pipeline: on track for May 15 cutover
+        - Legacy API deprecation: pushed to June 1 (dependency on partner integration)
+
+        Net: we are green overall with one date shift on the API
+        deprecation. Happy to walk through details in our Thursday sync.
+
+        Best,

@@ -1,0 +1,45 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: briefing-builder
+  namespace: examples
+  version: 1.0.0
+  display-name: "Briefing Builder"
+  description: >
+    Compiles executive briefings from multiple source documents.
+    Highlights key decisions, risks, and recommendations. Produces
+    a structured briefing suitable for leadership review.
+  license: Apache-2.0
+  tags:
+    - briefing
+    - executive
+    - synthesis
+    - productivity
+  compatibility: claude-3.5-sonnet
+  authors:
+    - name: OCTO Team
+      email: octo@redhat.com
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Build a briefing from these three project status reports for the CTO."
+      output: |
+        **Executive Briefing: Platform Services Q2 Status**
+
+        **Bottom line:** Two of three workstreams are on track.
+        The data pipeline migration needs a decision on the
+        cutover date by May 5 or it slips to Q3.
+
+        **Workstream summary:**
+        | Project | Status | Key risk |
+        |---------|--------|----------|
+        | Auth migration | Green | None |
+        | Data pipeline | Yellow | Cutover date undecided |
+        | API deprecation | Green | Partner dependency |
+
+        **Decision needed:** Approve May 15 or June 1 cutover
+        for the data pipeline. Trade-off: May 15 has higher
+        risk but avoids Q3 resource conflicts.
+
+        **Recommendation:** Approve June 1 with a fallback
+        plan if the partner integration lands early.
