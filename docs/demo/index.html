@@ -699,6 +699,14 @@
 
     <div class="yaml-section">
       <div class="yaml-header">
+        <h3>ServiceAccount</h3>
+        <button class="btn-copy" onclick="copyYaml('sa-yaml', this)">Copy</button>
+      </div>
+      <div class="yaml-block" id="sa-yaml"></div>
+    </div>
+
+    <div class="yaml-section">
+      <div class="yaml-header">
         <h3>Service</h3>
         <button class="btn-copy" onclick="copyYaml('service-yaml', this)">Copy</button>
       </div>
@@ -1053,6 +1061,13 @@ function selectAgent(id) {
 
 function selectPersona(id) {
   selectedPersona = id;
+  const persona = PERSONAS.find(p => p.id === id);
+  if (persona) {
+    selectedSkills.clear();
+    persona.recommendedSkills.forEach(sid => {
+      if (SKILLS.find(s => s.id === sid)) selectedSkills.add(sid);
+    });
+  }
   renderPersonas();
   document.getElementById('btn-next-2').disabled = false;
 }
@@ -1276,6 +1291,13 @@ ${volumeMounts}
       volumes:
 ${volumes}`;
 
+  const serviceAccount = `apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: docsclaw-agent
+  labels:
+    app: ${agentName}`;
+
   const service = `apiVersion: v1
 kind: Service
 metadata:
@@ -1294,6 +1316,7 @@ spec:
       targetPort: health`;
 
   document.getElementById('configmap-yaml').textContent = configMap;
+  document.getElementById('sa-yaml').textContent = serviceAccount;
   document.getElementById('service-yaml').textContent = service;
   document.getElementById('deployment-yaml').textContent = deployment;
 
@@ -1317,10 +1340,20 @@ function copyYaml(elementId, btn) {
 }
 
 function copyAll() {
+  const sa = document.getElementById('sa-yaml').textContent;
   const cm = document.getElementById('configmap-yaml').textContent;
   const svc = document.getElementById('service-yaml').textContent;
   const dep = document.getElementById('deployment-yaml').textContent;
-  navigator.clipboard.writeText(cm + '\n---\n' + svc + '\n---\n' + dep);
+  const all = [sa, cm, svc, dep].join('\n---\n');
+  const btn = document.querySelector('.nav-bar .btn-secondary');
+  navigator.clipboard.writeText(all).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }).catch(() => {
+    btn.textContent = 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy All Manifests'; }, 2000);
+  });
 }
 
 // ---- UTILS ----
