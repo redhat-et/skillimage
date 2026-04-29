@@ -18,7 +18,7 @@
     --text-muted: #c7c7c7;
     --text-dim: #707070;
     --accent: #ee0000;
-    --accent-hover: #f56e6e;
+    --accent-light: #f56e6e;
     --green: #63993d;
     --green-dim: rgba(99,153,61,0.18);
     --yellow: #dca614;
@@ -173,7 +173,7 @@
 
   .card:hover {
     background: var(--surface-hover);
-    border-color: #3a3e50;
+    border-color: #4d4d4d;
   }
 
   .card.selected {
@@ -240,7 +240,7 @@
 
   .badge-recommended {
     background: rgba(238,0,0,0.12);
-    color: var(--accent-hover);
+    color: var(--accent-light);
   }
 
   .badge-version {
@@ -273,7 +273,7 @@
     font-family: inherit;
   }
 
-  .prompt-toggle:hover { color: var(--accent-hover); }
+  .prompt-toggle:hover { color: var(--accent-light); }
 
   .prompt-text {
     display: none;
@@ -483,7 +483,6 @@
   .summary-empty {
     font-size: 13px;
     color: var(--text-dim);
-    font-style: italic;
   }
 
   /* Output panel */
@@ -610,7 +609,7 @@
   <div class="subtitle">Assemble and deploy AI agents on OpenShift</div>
 </header>
 
-<div class="container">
+<main class="container">
   <!-- Stepper -->
   <div class="stepper" id="stepper">
     <div class="step-indicator active" data-step="1" onclick="goToStep(1)">
@@ -726,7 +725,7 @@
       <button class="btn btn-secondary" onclick="copyAll()">Copy All Manifests</button>
     </div>
   </div>
-</div>
+</main>
 
 <script>
 // ---- DATA ----
