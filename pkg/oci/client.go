@@ -2,6 +2,8 @@ package oci
 
 import (
 	"oras.land/oras-go/v2/content/oci"
+
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
 // Client provides OCI operations against a local OCI layout store.
@@ -30,6 +32,9 @@ type BuildOptions struct {
 	// MediaType selects the media type profile. Empty or "standard" uses
 	// standard OCI types; "redhat" uses Red Hat-specific types for oc-mirror.
 	MediaType MediaTypeProfile
+	// SkillCard is a pre-built SkillCard to use instead of reading skill.yaml
+	// from disk. When non-nil, Build skips the file read/parse/validate steps.
+	SkillCard *skillcard.SkillCard
 }
 
 // PushOptions configures the Push operation.

@@ -25,30 +25,35 @@ import (
 // Build reads a skill directory, validates the SkillCard, creates an OCI image,
 // and stores it in the local OCI layout. It returns the manifest descriptor.
 func (c *Client) Build(ctx context.Context, skillDir string, opts BuildOptions) (ocispec.Descriptor, error) {
-	// 1. Read and parse skill.yaml.
-	skillPath := filepath.Join(skillDir, "skill.yaml")
-	f, err := os.Open(skillPath)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("opening skill.yaml: %w", err)
-	}
-	defer func() { _ = f.Close() }()
+	var sc *skillcard.SkillCard
 
-	sc, err := skillcard.Parse(f)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("parsing skill.yaml: %w", err)
-	}
-
-	// 2. Validate the SkillCard.
-	validationErrors, err := skillcard.Validate(sc)
-	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("validating skill.yaml: %w", err)
-	}
-	if len(validationErrors) > 0 {
-		var msgs []string
-		for _, ve := range validationErrors {
-			msgs = append(msgs, ve.String())
+	if opts.SkillCard != nil {
+		sc = opts.SkillCard
+	} else {
+		skillPath := filepath.Join(skillDir, "skill.yaml")
+		f, err := os.Open(skillPath)
+		if err != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("opening skill.yaml: %w", err)
 		}
-		return ocispec.Descriptor{}, fmt.Errorf("skill.yaml validation failed: %s", strings.Join(msgs, "; "))
+		defer func() { _ = f.Close() }()
+
+		var parseErr error
+		sc, parseErr = skillcard.Parse(f)
+		if parseErr != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("parsing skill.yaml: %w", parseErr)
+		}
+
+		validationErrors, valErr := skillcard.Validate(sc)
+		if valErr != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("validating skill.yaml: %w", valErr)
+		}
+		if len(validationErrors) > 0 {
+			var msgs []string
+			for _, ve := range validationErrors {
+				msgs = append(msgs, ve.String())
+			}
+			return ocispec.Descriptor{}, fmt.Errorf("skill.yaml validation failed: %s", strings.Join(msgs, "; "))
+		}
 	}
 
 	// 2b. Count words in SKILL.md if present, excluding YAML frontmatter.
