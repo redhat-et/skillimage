@@ -699,6 +699,14 @@
 
     <div class="yaml-section">
       <div class="yaml-header">
+        <h3>Service</h3>
+        <button class="btn-copy" onclick="copyYaml('service-yaml', this)">Copy</button>
+      </div>
+      <div class="yaml-block" id="service-yaml"></div>
+    </div>
+
+    <div class="yaml-section">
+      <div class="yaml-header">
         <h3>Deployment</h3>
         <button class="btn-copy" onclick="copyYaml('deployment-yaml', this)">Copy</button>
       </div>
@@ -1182,8 +1190,8 @@ function generateManifests() {
       `              mountPath: /config/agent/skills/${s.id}`,
       '              readOnly: true'
     ].join('\n')),
-    '            - name: workspace',
-    '              mountPath: /tmp/agent-workspace'
+    '            - name: tmp',
+    '              mountPath: /tmp'
   ].join('\n');
 
   const volumes = [
@@ -1196,7 +1204,7 @@ function generateManifests() {
       `            reference: ${s.image}`,
       '            pullPolicy: IfNotPresent'
     ].join('\n')),
-    '        - name: workspace',
+    '        - name: tmp',
     '          emptyDir: {}'
   ].join('\n');
 
@@ -1268,7 +1276,25 @@ ${volumeMounts}
       volumes:
 ${volumes}`;
 
+  const service = `apiVersion: v1
+kind: Service
+metadata:
+  name: ${agentName}
+  labels:
+    app: ${agentName}
+spec:
+  selector:
+    app: ${agentName}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+    - name: health
+      port: 8100
+      targetPort: health`;
+
   document.getElementById('configmap-yaml').textContent = configMap;
+  document.getElementById('service-yaml').textContent = service;
   document.getElementById('deployment-yaml').textContent = deployment;
 
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
@@ -1292,8 +1318,9 @@ function copyYaml(elementId, btn) {
 
 function copyAll() {
   const cm = document.getElementById('configmap-yaml').textContent;
+  const svc = document.getElementById('service-yaml').textContent;
   const dep = document.getElementById('deployment-yaml').textContent;
-  navigator.clipboard.writeText(cm + '\n---\n' + dep);
+  navigator.clipboard.writeText(cm + '\n---\n' + svc + '\n---\n' + dep);
 }
 
 // ---- UTILS ----
