@@ -1,0 +1,11 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCollection
+metadata:
+  name: document-processing
+  version: 1.0.0
+  description: Skills for document summarization and review
+skills:
+  - name: document-summarizer
+    image: quay.io/skillimage/business/document-summarizer:1.0.0-testing
+  - name: document-reviewer
+    image: quay.io/skillimage/business/document-reviewer:1.0.0-draft
