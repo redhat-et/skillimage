@@ -10,8 +10,12 @@ import (
 
 func writeSkillMD(t *testing.T, dir, content string) {
 	t.Helper()
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestDiscoverMultipleSkills(t *testing.T) {
@@ -79,7 +83,9 @@ func TestDiscoverWithFilter(t *testing.T) {
 
 func TestDiscoverNoSkills(t *testing.T) {
 	root := t.TempDir()
-	os.WriteFile(filepath.Join(root, "README.md"), []byte("no skills here"), 0o644)
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("no skills here"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := source.Discover(root, "")
 	if err == nil {
