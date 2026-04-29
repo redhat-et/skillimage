@@ -1,0 +1,33 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: meeting-notes-processor
+  namespace: examples
+  version: 1.0.0
+  display-name: "Meeting Notes Processor"
+  description: >
+    Extracts action items, decisions, and follow-ups from meeting
+    notes. Assigns owners and deadlines when mentioned. Produces
+    a structured output suitable for task trackers and standup
+    updates.
+  license: Apache-2.0
+  tags:
+    - meetings
+    - action-items
+    - productivity
+  compatibility: claude-3.5-sonnet
+  authors:
+    - name: OCTO Team
+      email: octo@redhat.com
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Process these meeting notes from the architecture review."
+      output: |
+        **Decisions:** Adopted event-driven architecture for the
+        notification service. Chose RabbitMQ over Kafka (lower
+        operational overhead for current scale).
+        **Action items:** 1) @mchen: draft event schema by May 2.
+        2) @jpark: spike on dead-letter queue handling by May 5.
+        **Follow-ups:** Revisit Kafka migration if throughput
+        exceeds 10k events/sec. Schedule load test for May 12.
