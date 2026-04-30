@@ -90,7 +90,7 @@ func TestInstallProvenance(t *testing.T) {
 		t.Fatalf("opening skill.yaml: %v", err)
 	}
 	sc, err := skillcard.Parse(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		t.Fatalf("parsing skill.yaml: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestInstallProvenance(t *testing.T) {
 		t.Fatalf("creating skill.yaml for write: %v", err)
 	}
 	err = skillcard.Serialize(sc, wf)
-	wf.Close()
+	_ = wf.Close()
 	if err != nil {
 		t.Fatalf("serializing skill.yaml: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestInstallProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-opening skill.yaml: %v", err)
 	}
-	defer f2.Close()
+	defer func() { _ = f2.Close() }()
 	sc2, err := skillcard.Parse(f2)
 	if err != nil {
 		t.Fatalf("re-parsing skill.yaml: %v", err)

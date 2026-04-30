@@ -121,7 +121,7 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 		return fmt.Errorf("opening skill.yaml: %w", err)
 	}
 	sc, err := skillcard.Parse(f)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return fmt.Errorf("parsing skill.yaml: %w", err)
 	}
@@ -136,6 +136,6 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	if err != nil {
 		return fmt.Errorf("creating skill.yaml: %w", err)
 	}
-	defer wf.Close()
+	defer func() { _ = wf.Close() }()
 	return skillcard.Serialize(sc, wf)
 }

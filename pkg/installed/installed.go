@@ -46,7 +46,7 @@ func Scan(targets map[string]string) ([]InstalledSkill, error) {
 			}
 
 			sc, err := skillcard.Parse(f)
-			f.Close()
+			_ = f.Close()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: skipping %s: %v\n", skillPath, err)
 				continue
