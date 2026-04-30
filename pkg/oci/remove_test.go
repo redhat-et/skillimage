@@ -105,7 +105,7 @@ func writeTestSkillNamed(t *testing.T, dir, name string) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	skillYAML := []byte(fmt.Sprintf(`apiVersion: skillimage.io/v1alpha1
+	skillYAML := fmt.Appendf(nil, `apiVersion: skillimage.io/v1alpha1
 kind: SkillCard
 metadata:
   name: %s
@@ -114,7 +114,7 @@ metadata:
   description: A test skill.
 spec:
   prompt: SKILL.md
-`, name))
+`, name)
 	if err := os.WriteFile(filepath.Join(dir, "skill.yaml"), skillYAML, 0o644); err != nil {
 		t.Fatal(err)
 	}
