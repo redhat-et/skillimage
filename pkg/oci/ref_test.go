@@ -63,9 +63,9 @@ func TestSkillNameFromRef(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			got := skillNameFromRef(tt.ref)
+			got := SkillNameFromRef(tt.ref)
 			if got != tt.want {
-				t.Errorf("skillNameFromRef(%q) = %q, want %q", tt.ref, got, tt.want)
+				t.Errorf("SkillNameFromRef(%q) = %q, want %q", tt.ref, got, tt.want)
 			}
 		})
 	}

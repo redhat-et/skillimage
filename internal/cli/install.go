@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/redhat-et/skillimage/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
 var agentTargets = map[string]string{
@@ -82,20 +85,82 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 		return err
 	}
 
-	if err := client.Unpack(context.Background(), ref, outputDir); err != nil {
+	ctx := cmd.Context()
+	if err := client.Unpack(ctx, ref, outputDir); err != nil {
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}
 
-	// Extract skill name for the output message
-	skillName := ref
-	if idx := strings.LastIndex(ref, "/"); idx >= 0 {
-		skillName = ref[idx+1:]
-	}
-	if idx := strings.LastIndex(skillName, ":"); idx >= 0 {
-		skillName = skillName[:idx]
+	dest := filepath.Join(outputDir, oci.SkillNameFromRef(ref))
+
+	// Write provenance into skill.yaml.
+	if err := writeProvenance(ctx, client, ref, dest); err != nil {
+		return fmt.Errorf("writing provenance: %w", err)
 	}
 
-	dest := filepath.Join(outputDir, skillName)
 	fmt.Fprintf(cmd.OutOrStdout(), "Installed %s to %s\n", ref, dest)
 	return nil
+}
+
+func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir string) error {
+	digest, err := client.ResolveDigest(ctx, ref)
+	if err != nil {
+		return err
+	}
+
+	skillPath := filepath.Join(skillDir, "skill.yaml")
+	var sc *skillcard.SkillCard
+
+	f, err := os.Open(skillPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("opening skill.yaml: %w", err)
+		}
+		sc = newSkillCardFromRef(ref)
+	} else {
+		sc, err = skillcard.Parse(f)
+		_ = f.Close()
+		if err != nil {
+			return fmt.Errorf("parsing skill.yaml: %w", err)
+		}
+	}
+
+	if sc.Provenance == nil {
+		sc.Provenance = &skillcard.Provenance{}
+	}
+	sc.Provenance.Source = ref
+	sc.Provenance.Commit = digest
+
+	wf, err := os.Create(skillPath)
+	if err != nil {
+		return fmt.Errorf("creating skill.yaml: %w", err)
+	}
+	defer func() { _ = wf.Close() }()
+	return skillcard.Serialize(sc, wf)
+}
+
+func newSkillCardFromRef(ref string) *skillcard.SkillCard {
+	name := oci.SkillNameFromRef(ref)
+
+	version := "unknown"
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		version = ref[idx+1:]
+	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+		version = ref[idx+1:]
+	}
+
+	namespace := "unknown"
+	if idx := strings.Index(ref, "/"); idx >= 0 {
+		namespace = ref[:idx]
+	}
+
+	return &skillcard.SkillCard{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCard",
+		Metadata: skillcard.Metadata{
+			Name:        name,
+			Namespace:   namespace,
+			Version:     version,
+			Description: "Installed from " + ref,
+		},
+	}
 }
