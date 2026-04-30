@@ -42,18 +42,18 @@ func (c *Client) Build(ctx context.Context, skillDir string, opts BuildOptions) 
 		if parseErr != nil {
 			return ocispec.Descriptor{}, fmt.Errorf("parsing skill.yaml: %w", parseErr)
 		}
+	}
 
-		validationErrors, valErr := skillcard.Validate(sc)
-		if valErr != nil {
-			return ocispec.Descriptor{}, fmt.Errorf("validating skill.yaml: %w", valErr)
+	validationErrors, valErr := skillcard.Validate(sc)
+	if valErr != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("validating SkillCard: %w", valErr)
+	}
+	if len(validationErrors) > 0 {
+		var msgs []string
+		for _, ve := range validationErrors {
+			msgs = append(msgs, ve.String())
 		}
-		if len(validationErrors) > 0 {
-			var msgs []string
-			for _, ve := range validationErrors {
-				msgs = append(msgs, ve.String())
-			}
-			return ocispec.Descriptor{}, fmt.Errorf("skill.yaml validation failed: %s", strings.Join(msgs, "; "))
-		}
+		return ocispec.Descriptor{}, fmt.Errorf("SkillCard validation failed: %s", strings.Join(msgs, "; "))
 	}
 
 	// 2b. Count words in SKILL.md if present, excluding YAML frontmatter.

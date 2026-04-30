@@ -64,28 +64,35 @@ func Resolve(ctx context.Context, input string, ref string, filter string) (*Res
 
 	var skills []ResolvedSkill
 	for _, d := range discovered {
+		var sc *skillcard.SkillCard
+
 		if hasSkillYAML(d.Dir) {
-			skills = append(skills, ResolvedSkill{Dir: d.Dir, Name: d.Name, SkillCard: nil})
-			continue
-		}
-
-		sc, err := GenerateSkillCard(d.Dir, src.CloneURL, org)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: skipping %s: %v\n", d.Name, err)
-			continue
-		}
-
-		if sc.Metadata.Namespace == "" || sc.Metadata.Name == "" {
-			fmt.Fprintf(os.Stderr, "Warning: skipping %s: generated SkillCard missing namespace or name\n", d.Name)
-			continue
+			parsed, parseErr := parseSkillYAML(d.Dir)
+			if parseErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: skipping %s: %v\n", d.Name, parseErr)
+				continue
+			}
+			sc = parsed
+		} else {
+			generated, genErr := GenerateSkillCard(d.Dir, src.CloneURL, org)
+			if genErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: skipping %s: %v\n", d.Name, genErr)
+				continue
+			}
+			if generated.Metadata.Namespace == "" || generated.Metadata.Name == "" {
+				fmt.Fprintf(os.Stderr, "Warning: skipping %s: generated SkillCard missing namespace or name\n", d.Name)
+				continue
+			}
+			sc = generated
 		}
 
 		relPath := relativeToClone(cloneResult.Dir, d.Dir, src.SubPath)
-		sc.Provenance = &skillcard.Provenance{
-			Source: src.CloneURL,
-			Commit: cloneResult.CommitSHA,
-			Path:   relPath,
+		if sc.Provenance == nil {
+			sc.Provenance = &skillcard.Provenance{}
 		}
+		sc.Provenance.Source = src.CloneURL
+		sc.Provenance.Commit = cloneResult.CommitSHA
+		sc.Provenance.Path = relPath
 
 		skills = append(skills, ResolvedSkill{Dir: d.Dir, Name: d.Name, SkillCard: sc})
 	}
@@ -105,6 +112,15 @@ func Resolve(ctx context.Context, input string, ref string, filter string) (*Res
 func hasSkillYAML(dir string) bool {
 	_, err := os.Stat(filepath.Join(dir, "skill.yaml"))
 	return err == nil
+}
+
+func parseSkillYAML(dir string) (*skillcard.SkillCard, error) {
+	f, err := os.Open(filepath.Join(dir, "skill.yaml"))
+	if err != nil {
+		return nil, fmt.Errorf("opening skill.yaml: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	return skillcard.Parse(f)
 }
 
 func relativeToClone(cloneDir, skillDir, subPath string) string {

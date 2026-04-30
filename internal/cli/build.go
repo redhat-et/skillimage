@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/redhat-et/skillimage/pkg/oci"
 	"github.com/redhat-et/skillimage/pkg/source"
@@ -43,7 +43,7 @@ func runBuild(cmd *cobra.Command, dir, tag, mediaType string) error {
 		return err
 	}
 
-	desc, err := client.Build(context.Background(), dir, oci.BuildOptions{
+	desc, err := client.Build(cmd.Context(), dir, oci.BuildOptions{
 		Tag:       tag,
 		MediaType: profile,
 	})
@@ -61,9 +61,10 @@ func runBuildRemote(cmd *cobra.Command, rawURL, tag, mediaType, ref, filter stri
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Cloning %s", rawURL)
+	displayURL := sanitizeURL(rawURL)
+	fmt.Fprintf(cmd.OutOrStdout(), "Cloning %s", displayURL)
 	if ref != "" {
 		fmt.Fprintf(cmd.OutOrStdout(), " (ref: %s)", ref)
 	}
@@ -102,9 +103,18 @@ func runBuildRemote(cmd *cobra.Command, rawURL, tag, mediaType, ref, filter stri
 		built++
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "\nBuilt %d skills from %s\n", built, rawURL)
+	fmt.Fprintf(cmd.OutOrStdout(), "\nBuilt %d skills from %s\n", built, displayURL)
 	if failed > 0 {
 		return fmt.Errorf("%d skill(s) failed to build", failed)
 	}
 	return nil
+}
+
+func sanitizeURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	u.User = nil
+	return u.String()
 }

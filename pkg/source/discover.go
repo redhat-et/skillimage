@@ -2,6 +2,7 @@ package source
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,6 +15,12 @@ type DiscoveredSkill struct {
 }
 
 func Discover(dir string, filter string) ([]DiscoveredSkill, error) {
+	if filter != "" {
+		if _, err := filepath.Match(filter, "test"); err != nil {
+			return nil, fmt.Errorf("invalid --filter pattern %q: %w", filter, err)
+		}
+	}
+
 	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err == nil {
 		name := resolveSkillName(dir)
 		if filter != "" {
@@ -25,33 +32,33 @@ func Discover(dir string, filter string) ([]DiscoveredSkill, error) {
 	}
 
 	var skills []DiscoveredSkill
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("reading directory %s: %w", dir, err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
-			continue
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-
-		subDir := filepath.Join(dir, entry.Name())
-		if _, err := os.Stat(filepath.Join(subDir, "SKILL.md")); err != nil {
-			nested, nestedErr := discoverNested(subDir, filter)
-			if nestedErr != nil {
-				return nil, fmt.Errorf("discovering skills in %s: %w", subDir, nestedErr)
-			}
-			skills = append(skills, nested...)
-			continue
+		if !d.IsDir() {
+			return nil
 		}
-
-		name := resolveSkillName(subDir)
+		if strings.HasPrefix(d.Name(), ".") {
+			return fs.SkipDir
+		}
+		if path == dir {
+			return nil
+		}
+		if _, statErr := os.Stat(filepath.Join(path, "SKILL.md")); statErr != nil {
+			return nil
+		}
+		name := resolveSkillName(path)
 		if filter != "" {
 			if matched, _ := filepath.Match(filter, name); !matched {
-				continue
+				return fs.SkipDir
 			}
 		}
-		skills = append(skills, DiscoveredSkill{Dir: subDir, Name: name})
+		skills = append(skills, DiscoveredSkill{Dir: path, Name: name})
+		return fs.SkipDir
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walking %s: %w", dir, err)
 	}
 
 	sort.Slice(skills, func(i, j int) bool { return skills[i].Name < skills[j].Name })
@@ -63,32 +70,6 @@ func Discover(dir string, filter string) ([]DiscoveredSkill, error) {
 		return nil, fmt.Errorf("no skills found in %s", dir)
 	}
 
-	return skills, nil
-}
-
-func discoverNested(dir string, filter string) ([]DiscoveredSkill, error) {
-	var skills []DiscoveredSkill
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
-			continue
-		}
-		subDir := filepath.Join(dir, entry.Name())
-		if _, err := os.Stat(filepath.Join(subDir, "SKILL.md")); err != nil {
-			continue
-		}
-		name := resolveSkillName(subDir)
-		if filter != "" {
-			if matched, _ := filepath.Match(filter, name); !matched {
-				continue
-			}
-		}
-		skills = append(skills, DiscoveredSkill{Dir: subDir, Name: name})
-	}
 	return skills, nil
 }
 

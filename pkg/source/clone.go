@@ -83,6 +83,12 @@ func cloneRepo(ctx context.Context, cloneURL, ref, subPath, destDir string) erro
 		if err := sparseClone(ctx, cloneURL, ref, subPath, destDir); err == nil {
 			return nil
 		}
+		// Sparse clone may have partially populated destDir; clean it
+		// before falling back to a full shallow clone.
+		entries, _ := os.ReadDir(destDir)
+		for _, e := range entries {
+			_ = os.RemoveAll(filepath.Join(destDir, e.Name()))
+		}
 	}
 
 	return shallowClone(ctx, cloneURL, ref, destDir)

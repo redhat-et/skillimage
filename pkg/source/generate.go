@@ -113,9 +113,14 @@ func firstSentence(body string) string {
 }
 
 func normalizeVersion(v string) string {
+	var suffix string
+	if idx := strings.IndexAny(v, "-+"); idx >= 0 {
+		suffix = v[idx:]
+		v = v[:idx]
+	}
 	parts := strings.Split(v, ".")
 	for len(parts) < 3 {
 		parts = append(parts, "0")
 	}
-	return strings.Join(parts[:3], ".")
+	return strings.Join(parts[:3], ".") + suffix
 }
