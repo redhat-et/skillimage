@@ -2,9 +2,7 @@ package cli
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -38,7 +36,7 @@ func runRm(cmd *cobra.Command, refs []string, force bool) error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	// Resolve all refs first to report errors before confirming.
 	images, err := client.ListLocal()
@@ -79,7 +77,7 @@ func runRm(cmd *cobra.Command, refs []string, force bool) error {
 			fmt.Fprintf(cmd.OutOrStdout(), "Remove %d image(s)? [y/N] ", len(valid))
 		}
 
-		scanner := bufio.NewScanner(os.Stdin)
+		scanner := bufio.NewScanner(cmd.InOrStdin())
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {
 				return fmt.Errorf("reading confirmation: %w", err)

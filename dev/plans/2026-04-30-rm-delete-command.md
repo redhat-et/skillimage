@@ -18,7 +18,7 @@ the existing `prune` command.
 
 ---
 
-### Task 1: Client.Remove method — test
+## Task 1: Client.Remove method — test
 
 **Files:**
 - Create: `pkg/oci/remove_test.go`
@@ -180,7 +180,7 @@ git commit -s -m "test: add failing tests for Client.Remove"
 
 ---
 
-### Task 2: Client.Remove method — implementation
+## Task 2: Client.Remove method — implementation
 
 **Files:**
 - Create: `pkg/oci/remove.go`
@@ -240,7 +240,7 @@ git commit -s -m "feat: add Client.Remove to untag local images"
 
 ---
 
-### Task 3: CLI rm command
+## Task 3: CLI rm command
 
 **Files:**
 - Create: `internal/cli/rm.go`

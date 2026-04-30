@@ -23,7 +23,7 @@ reference. Users need a way to remove individual images.
 
 **File:** `internal/cli/rm.go`
 
-```
+```text
 skillctl rm <ref> [<ref>...] [flags]
 ```
 
