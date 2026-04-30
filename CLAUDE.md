@@ -35,7 +35,8 @@ make fmt         # Format code
 | `schemas/` | JSON Schema for SkillCard |
 | `api/` | OpenAPI 3.1 spec |
 | `deploy/` | Dockerfile, Kustomize overlays |
-| `docs/` | Design specs, research, ADRs |
+| `docs/` | Published site (GitHub Pages) |
+| `dev/` | Internal plans and specs |
 
 ## Architecture
 
