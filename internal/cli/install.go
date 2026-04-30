@@ -141,6 +141,12 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	sc.Provenance.Source = ref
 	sc.Provenance.Commit = digest
 
+	// Update version from the ref tag so it stays in sync with
+	// what was actually installed (the tag is authoritative).
+	if tag := tagFromRef(ref); tag != "" {
+		sc.Metadata.Version = tag
+	}
+
 	wf, err := os.Create(skillPath)
 	if err != nil {
 		return fmt.Errorf("creating skill.yaml: %w", err)
@@ -149,14 +155,32 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	return skillcard.Serialize(sc, wf)
 }
 
+// tagFromRef extracts the tag portion from a ref like
+// "quay.io/acme/skill:1.0.0". Returns empty string if no tag.
+func tagFromRef(ref string) string {
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		return ref[idx+1:]
+	}
+	lastSlash := strings.LastIndex(ref, "/")
+	if lastSlash < 0 {
+		if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+			return ref[idx+1:]
+		}
+		return ""
+	}
+	tail := ref[lastSlash+1:]
+	if idx := strings.LastIndex(tail, ":"); idx >= 0 {
+		return tail[idx+1:]
+	}
+	return ""
+}
+
 func newSkillCardFromRef(ref string) *skillcard.SkillCard {
 	name := oci.SkillNameFromRef(ref)
 
-	version := "unknown"
-	if idx := strings.Index(ref, "@"); idx >= 0 {
-		version = ref[idx+1:]
-	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
-		version = ref[idx+1:]
+	version := tagFromRef(ref)
+	if version == "" {
+		version = "unknown"
 	}
 
 	namespace := "unknown"
