@@ -81,6 +81,9 @@ func runRm(cmd *cobra.Command, refs []string, force bool) error {
 
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return fmt.Errorf("reading confirmation: %w", err)
+			}
 			return nil
 		}
 		answer := strings.TrimSpace(scanner.Text())
