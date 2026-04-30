@@ -86,6 +86,17 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 	}
 
 	ctx := cmd.Context()
+
+	// If the ref looks remote, pull it first if not already in the local store.
+	if !looksLocal(ref) {
+		if _, err := client.ResolveDigest(ctx, ref); err != nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Pulling %s...\n", ref)
+			if _, pullErr := client.Pull(ctx, ref, oci.PullOptions{}); pullErr != nil {
+				return fmt.Errorf("pulling %s: %w", ref, pullErr)
+			}
+		}
+	}
+
 	if err := client.Unpack(ctx, ref, outputDir); err != nil {
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}
