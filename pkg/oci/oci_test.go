@@ -8,6 +8,7 @@ import (
 
 	"github.com/redhat-et/skillimage/pkg/lifecycle"
 	"github.com/redhat-et/skillimage/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
 func writeTestSkill(t *testing.T, dir string) {
@@ -558,5 +559,57 @@ spec:
 
 	if result.WordCount != "" {
 		t.Errorf("wordcount should be empty for empty SKILL.md, got %q", result.WordCount)
+	}
+}
+
+func TestBuildWithPrebuiltSkillCard(t *testing.T) {
+	skillDir := t.TempDir()
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(skillDir, "SKILL.md"),
+		[]byte("You are a test skill."),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	storeDir := t.TempDir()
+	client, err := oci.NewClient(storeDir)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	sc := &skillcard.SkillCard{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCard",
+		Metadata: skillcard.Metadata{
+			Name:        "prebuilt-test",
+			Namespace:   "test",
+			Version:     "1.0.0",
+			Description: "A prebuilt test skill.",
+		},
+		Spec: &skillcard.Spec{Prompt: "SKILL.md"},
+	}
+
+	ctx := context.Background()
+	desc, err := client.Build(ctx, skillDir, oci.BuildOptions{SkillCard: sc})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if desc.Digest.String() == "" {
+		t.Error("expected non-empty digest")
+	}
+
+	images, err := client.ListLocal()
+	if err != nil {
+		t.Fatalf("ListLocal: %v", err)
+	}
+	if len(images) != 1 {
+		t.Fatalf("expected 1 image, got %d", len(images))
+	}
+	if images[0].Name != "test/prebuilt-test" {
+		t.Errorf("image name = %q, want %q", images[0].Name, "test/prebuilt-test")
 	}
 }
