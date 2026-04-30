@@ -90,15 +90,7 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}
 
-	// Extract skill name for path and output message.
-	skillName := ref
-	if idx := strings.LastIndex(ref, "/"); idx >= 0 {
-		skillName = ref[idx+1:]
-	}
-	if idx := strings.LastIndex(skillName, ":"); idx >= 0 {
-		skillName = skillName[:idx]
-	}
-	dest := filepath.Join(outputDir, skillName)
+	dest := filepath.Join(outputDir, oci.SkillNameFromRef(ref))
 
 	// Write provenance into skill.yaml.
 	if err := writeProvenance(ctx, client, ref, dest); err != nil {
@@ -147,14 +139,13 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 }
 
 func newSkillCardFromRef(ref string) *skillcard.SkillCard {
-	name := ref
-	if idx := strings.LastIndex(name, "/"); idx >= 0 {
-		name = name[idx+1:]
-	}
+	name := oci.SkillNameFromRef(ref)
+
 	version := "unknown"
-	if idx := strings.LastIndex(name, ":"); idx >= 0 {
-		version = name[idx+1:]
-		name = name[:idx]
+	if idx := strings.Index(ref, "@"); idx >= 0 {
+		version = ref[idx+1:]
+	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+		version = ref[idx+1:]
 	}
 
 	namespace := "unknown"

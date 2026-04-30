@@ -1,9 +1,11 @@
 package installed
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
@@ -28,10 +30,10 @@ func Scan(targets map[string]string) ([]InstalledSkill, error) {
 	for target, dir := range targets {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
-			if os.IsNotExist(err) {
-				continue
+			if !os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Warning: cannot read %s: %v\n", dir, err)
 			}
-			return nil, fmt.Errorf("reading %s: %w", dir, err)
+			continue
 		}
 
 		for _, entry := range entries {
@@ -66,6 +68,13 @@ func Scan(targets map[string]string) ([]InstalledSkill, error) {
 			skills = append(skills, skill)
 		}
 	}
+
+	slices.SortFunc(skills, func(a, b InstalledSkill) int {
+		if c := cmp.Compare(a.Target, b.Target); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Name, b.Name)
+	})
 
 	return skills, nil
 }

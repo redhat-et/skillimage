@@ -65,7 +65,7 @@ func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error
 	}
 
 	// 3. Extract skill name from the ref (last segment before :tag).
-	skillName := skillNameFromRef(ref)
+	skillName := SkillNameFromRef(ref)
 
 	// 4. Create outputDir/skillName/ directory.
 	targetDir := filepath.Join(outputDir, skillName)
@@ -83,9 +83,10 @@ func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error
 	return nil
 }
 
-// skillNameFromRef extracts the skill name from a reference like
-// "namespace/name:tag" -- it returns "name".
-func skillNameFromRef(ref string) string {
+// SkillNameFromRef extracts the skill name from a reference like
+// "namespace/name:tag" — it returns "name". Handles both tag
+// (name:tag) and digest (name@sha256:...) references.
+func SkillNameFromRef(ref string) string {
 	name := ref
 	if idx := strings.Index(ref, "@"); idx >= 0 {
 		name = ref[:idx]
