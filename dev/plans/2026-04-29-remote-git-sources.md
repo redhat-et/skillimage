@@ -19,7 +19,7 @@ SkillCard.
 **Tech Stack:** Go stdlib `os/exec` for git, `gopkg.in/yaml.v3`
 for frontmatter parsing, `filepath.Match` for glob filtering.
 
-**Spec:** `docs/superpowers/specs/2026-04-29-remote-git-sources-design.md`
+**Spec:** `dev/specs/2026-04-29-remote-git-sources-design.md`
 
 ---
 

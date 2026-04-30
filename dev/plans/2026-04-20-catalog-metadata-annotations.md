@@ -18,7 +18,7 @@ CLI inspect command to surface the new fields.
 **Tech Stack:** Go, oras-go, OCI image spec, Cobra
 
 **Spec:**
-`docs/superpowers/specs/2026-04-20-catalog-metadata-annotations-design.md`
+`dev/specs/2026-04-20-catalog-metadata-annotations-design.md`
 
 ---
 

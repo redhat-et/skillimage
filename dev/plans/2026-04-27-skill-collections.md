@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.25+, oras-go, Cobra, chi, SQLite, gopkg.in/yaml.v3
 
-**Spec:** `docs/superpowers/specs/2026-04-27-skill-collections-design.md`
+**Spec:** `dev/specs/2026-04-27-skill-collections-design.md`
 
 ---
 
@@ -1587,7 +1587,7 @@ gh pr create --draft --title "feat: add skill collections, remove bundles" --bod
 - Add collections table and API endpoints to catalog server
 - Remove all bundle code (replaced by collections)
 
-Design spec: `docs/superpowers/specs/2026-04-27-skill-collections-design.md`
+Design spec: `dev/specs/2026-04-27-skill-collections-design.md`
 
 ## Test plan
 
