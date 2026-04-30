@@ -7,8 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var commitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
 type CloneOptions struct {
 	RefOverride string
@@ -67,7 +70,15 @@ func Clone(ctx context.Context, src GitSource, opts CloneOptions) (*CloneResult,
 	return &CloneResult{Dir: resolvedDir, CommitSHA: sha, Cleanup: cleanup}, nil
 }
 
+func isCommitSHA(ref string) bool {
+	return commitSHAPattern.MatchString(ref)
+}
+
 func cloneRepo(ctx context.Context, cloneURL, ref, subPath, destDir string) error {
+	if isCommitSHA(ref) {
+		return cloneAtCommit(ctx, cloneURL, ref, destDir)
+	}
+
 	if subPath != "" {
 		if err := sparseClone(ctx, cloneURL, ref, subPath, destDir); err == nil {
 			return nil
@@ -75,6 +86,13 @@ func cloneRepo(ctx context.Context, cloneURL, ref, subPath, destDir string) erro
 	}
 
 	return shallowClone(ctx, cloneURL, ref, destDir)
+}
+
+func cloneAtCommit(ctx context.Context, cloneURL, sha, destDir string) error {
+	if err := runGit(ctx, "", "clone", "--no-checkout", cloneURL, destDir); err != nil {
+		return err
+	}
+	return runGit(ctx, destDir, "checkout", sha)
 }
 
 func sparseClone(ctx context.Context, cloneURL, ref, subPath, destDir string) error {
@@ -120,7 +138,23 @@ func runGit(ctx context.Context, dir string, args ...string) error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git %v: %s", args, stderr.String())
+		return fmt.Errorf("git %s failed: %s", args[0], sanitizeGitOutput(stderr.String()))
 	}
 	return nil
+}
+
+func sanitizeGitOutput(s string) string {
+	s = strings.TrimSpace(s)
+	// Strip lines that may contain credentials in URLs.
+	var clean []string
+	for line := range strings.SplitSeq(s, "\n") {
+		if strings.Contains(line, "@") && strings.Contains(line, "://") {
+			continue
+		}
+		clean = append(clean, line)
+	}
+	if len(clean) == 0 {
+		return "(git output redacted — may contain credentials)"
+	}
+	return strings.Join(clean, "\n")
 }

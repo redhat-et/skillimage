@@ -75,6 +75,11 @@ func Resolve(ctx context.Context, input string, ref string, filter string) (*Res
 			continue
 		}
 
+		if sc.Metadata.Namespace == "" || sc.Metadata.Name == "" {
+			fmt.Fprintf(os.Stderr, "Warning: skipping %s: generated SkillCard missing namespace or name\n", d.Name)
+			continue
+		}
+
 		relPath := relativeToClone(cloneResult.Dir, d.Dir, src.SubPath)
 		sc.Provenance = &skillcard.Provenance{
 			Source: src.CloneURL,

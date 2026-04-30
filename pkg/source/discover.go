@@ -37,7 +37,10 @@ func Discover(dir string, filter string) ([]DiscoveredSkill, error) {
 
 		subDir := filepath.Join(dir, entry.Name())
 		if _, err := os.Stat(filepath.Join(subDir, "SKILL.md")); err != nil {
-			nested, _ := discoverNested(subDir, filter)
+			nested, nestedErr := discoverNested(subDir, filter)
+			if nestedErr != nil {
+				return nil, fmt.Errorf("discovering skills in %s: %w", subDir, nestedErr)
+			}
 			skills = append(skills, nested...)
 			continue
 		}

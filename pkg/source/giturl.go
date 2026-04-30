@@ -53,13 +53,11 @@ func parseGitHub(u *url.URL, parts []string) (GitSource, error) {
 }
 
 func parseGitLab(u *url.URL, parts []string) (GitSource, error) {
-	org := parts[0]
-	repo := strings.TrimSuffix(parts[1], ".git")
-	cloneURL := fmt.Sprintf("https://%s/%s/%s.git", u.Host, org, repo)
+	var ref, subPath, groupRepoPath string
 
-	var ref, subPath string
 	for i, p := range parts {
 		if p == "-" && i+2 < len(parts) && parts[i+1] == "tree" {
+			groupRepoPath = strings.Join(parts[:i], "/")
 			ref = parts[i+2]
 			if i+3 < len(parts) {
 				subPath = strings.Join(parts[i+3:], "/")
@@ -67,6 +65,12 @@ func parseGitLab(u *url.URL, parts []string) (GitSource, error) {
 			break
 		}
 	}
+
+	if groupRepoPath == "" {
+		groupRepoPath = strings.Join(parts[:2], "/")
+	}
+	groupRepoPath = strings.TrimSuffix(groupRepoPath, ".git")
+	cloneURL := fmt.Sprintf("https://%s/%s.git", u.Host, groupRepoPath)
 
 	return GitSource{CloneURL: cloneURL, Ref: ref, SubPath: subPath}, nil
 }

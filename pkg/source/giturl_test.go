@@ -68,6 +68,15 @@ func TestParseGitURL(t *testing.T) {
 			},
 		},
 		{
+			name: "gitlab nested group",
+			raw:  "https://gitlab.com/org/subgroup/repo/-/tree/main/skills",
+			want: source.GitSource{
+				CloneURL: "https://gitlab.com/org/subgroup/repo.git",
+				Ref:      "main",
+				SubPath:  "skills",
+			},
+		},
+		{
 			name:    "not a URL",
 			raw:     "/some/local/path",
 			wantErr: true,
