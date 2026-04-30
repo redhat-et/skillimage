@@ -135,6 +135,37 @@ func TestCheckUpgrades_LocalRef(t *testing.T) {
 	}
 }
 
+func TestCheckUpgrades_RelativePath(t *testing.T) {
+	skills := []installed.InstalledSkill{
+		{
+			Name:    "my-skill",
+			Version: "1.0.0",
+			Source:  "./my-skill:1.0.0",
+			Target:  "claude",
+		},
+		{
+			Name:    "other-skill",
+			Version: "1.0.0",
+			Source:  "../skills/other-skill:1.0.0",
+			Target:  "claude",
+		},
+	}
+
+	lister := func(ctx context.Context, repo string, skipTLS bool) ([]string, error) {
+		t.Fatal("should not be called for relative paths")
+		return nil, nil
+	}
+
+	candidates, err := installed.CheckUpgrades(context.Background(), skills,
+		installed.CheckOptions{TagLister: lister})
+	if err != nil {
+		t.Fatalf("CheckUpgrades: %v", err)
+	}
+	if len(candidates) != 0 {
+		t.Errorf("expected 0 candidates for relative paths, got %d", len(candidates))
+	}
+}
+
 func TestCheckUpgrades_InvalidSemver(t *testing.T) {
 	skills := []installed.InstalledSkill{
 		{

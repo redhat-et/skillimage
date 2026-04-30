@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -141,41 +138,5 @@ func runListInstalled(cmd *cobra.Command, target, outputDir string, upgradable b
 }
 
 func resolveListTargets(target, outputDir string) (map[string]string, error) {
-	if outputDir != "" {
-		if strings.HasPrefix(outputDir, "~/") || outputDir == "~" {
-			h, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("finding home directory: %w", err)
-			}
-			outputDir = filepath.Join(h, outputDir[1:])
-		}
-		abs, err := filepath.Abs(outputDir)
-		if err != nil {
-			return nil, fmt.Errorf("resolving path: %w", err)
-		}
-		return map[string]string{outputDir: abs}, nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("finding home directory: %w", err)
-	}
-
-	if target != "" {
-		relPath, ok := agentTargets[strings.ToLower(target)]
-		if !ok {
-			var names []string
-			for k := range agentTargets {
-				names = append(names, k)
-			}
-			return nil, fmt.Errorf("unknown target %q (supported: %s)", target, strings.Join(names, ", "))
-		}
-		return map[string]string{target: filepath.Join(home, relPath)}, nil
-	}
-
-	targets := make(map[string]string, len(agentTargets))
-	for name, relPath := range agentTargets {
-		targets[name] = filepath.Join(home, relPath)
-	}
-	return targets, nil
+	return resolveTargetDirs(target, outputDir, true)
 }

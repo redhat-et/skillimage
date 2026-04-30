@@ -3,9 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -158,33 +156,5 @@ func upgradeSkill(ctx context.Context, client *oci.Client, c installed.UpgradeCa
 }
 
 func resolveUpgradeTarget(target, outputDir string) (map[string]string, error) {
-	if outputDir != "" {
-		if strings.HasPrefix(outputDir, "~/") || outputDir == "~" {
-			h, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("finding home directory: %w", err)
-			}
-			outputDir = filepath.Join(h, outputDir[1:])
-		}
-		abs, err := filepath.Abs(outputDir)
-		if err != nil {
-			return nil, fmt.Errorf("resolving path: %w", err)
-		}
-		return map[string]string{outputDir: abs}, nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("finding home directory: %w", err)
-	}
-
-	relPath, ok := agentTargets[strings.ToLower(target)]
-	if !ok {
-		var names []string
-		for k := range agentTargets {
-			names = append(names, k)
-		}
-		return nil, fmt.Errorf("unknown target %q (supported: %s)", target, strings.Join(names, ", "))
-	}
-	return map[string]string{target: filepath.Join(home, relPath)}, nil
+	return resolveTargetDirs(target, outputDir, false)
 }

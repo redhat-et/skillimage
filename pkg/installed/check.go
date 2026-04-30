@@ -2,6 +2,8 @@ package installed
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -51,6 +53,7 @@ func CheckUpgrades(ctx context.Context, skills []InstalledSkill, opts CheckOptio
 
 		tags, err := opts.TagLister(ctx, repo, opts.SkipTLSVerify)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: cannot check %s: %v\n", skill.Name, err)
 			continue
 		}
 
@@ -71,8 +74,12 @@ func CheckUpgrades(ctx context.Context, skills []InstalledSkill, opts CheckOptio
 
 // looksRemote returns true if the ref contains a registry host.
 // A ref is remote if its first path segment contains a dot or colon
-// (e.g., "quay.io/...", "localhost:5000/...").
+// (e.g., "quay.io/...", "localhost:5000/...") but does not start
+// with "." (which indicates a relative filesystem path).
 func looksRemote(ref string) bool {
+	if strings.HasPrefix(ref, ".") {
+		return false
+	}
 	first := ref
 	if idx := strings.Index(ref, "/"); idx >= 0 {
 		first = ref[:idx]
