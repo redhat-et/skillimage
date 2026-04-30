@@ -44,6 +44,9 @@ func Scan(targets map[string]string) ([]InstalledSkill, error) {
 			skillPath := filepath.Join(dir, entry.Name(), "skill.yaml")
 			f, err := os.Open(skillPath)
 			if err != nil {
+				if !os.IsNotExist(err) {
+					fmt.Fprintf(os.Stderr, "Warning: cannot read %s: %v\n", skillPath, err)
+				}
 				continue
 			}
 

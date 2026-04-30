@@ -112,6 +112,13 @@ func runListInstalled(cmd *cobra.Command, target, outputDir string) error {
 
 func resolveListTargets(target, outputDir string) (map[string]string, error) {
 	if outputDir != "" {
+		if strings.HasPrefix(outputDir, "~/") || outputDir == "~" {
+			h, err := os.UserHomeDir()
+			if err != nil {
+				return nil, fmt.Errorf("finding home directory: %w", err)
+			}
+			outputDir = filepath.Join(h, outputDir[1:])
+		}
 		abs, err := filepath.Abs(outputDir)
 		if err != nil {
 			return nil, fmt.Errorf("resolving path: %w", err)

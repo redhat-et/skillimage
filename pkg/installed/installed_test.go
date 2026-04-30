@@ -91,7 +91,7 @@ func TestScan(t *testing.T) {
 
 func TestScanNonExistentDir(t *testing.T) {
 	targets := map[string]string{
-		"claude": "/nonexistent/path/that/does/not/exist",
+		"claude": filepath.Join(t.TempDir(), "does", "not", "exist"),
 	}
 
 	skills, err := installed.Scan(targets)
