@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/redhat-et/skillimage/pkg/oci"
+	"github.com/redhat-et/skillimage/pkg/skillcard"
 )
 
 var agentTargets = map[string]string{
@@ -82,11 +85,12 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 		return err
 	}
 
-	if err := client.Unpack(context.Background(), ref, outputDir); err != nil {
+	ctx := cmd.Context()
+	if err := client.Unpack(ctx, ref, outputDir); err != nil {
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}
 
-	// Extract skill name for the output message
+	// Extract skill name for path and output message.
 	skillName := ref
 	if idx := strings.LastIndex(ref, "/"); idx >= 0 {
 		skillName = ref[idx+1:]
@@ -94,8 +98,44 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 	if idx := strings.LastIndex(skillName, ":"); idx >= 0 {
 		skillName = skillName[:idx]
 	}
-
 	dest := filepath.Join(outputDir, skillName)
+
+	// Write provenance into skill.yaml.
+	if err := writeProvenance(ctx, client, ref, dest); err != nil {
+		return fmt.Errorf("writing provenance: %w", err)
+	}
+
 	fmt.Fprintf(cmd.OutOrStdout(), "Installed %s to %s\n", ref, dest)
 	return nil
+}
+
+func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir string) error {
+	digest, err := client.ResolveDigest(ctx, ref)
+	if err != nil {
+		return err
+	}
+
+	skillPath := filepath.Join(skillDir, "skill.yaml")
+	f, err := os.Open(skillPath)
+	if err != nil {
+		return fmt.Errorf("opening skill.yaml: %w", err)
+	}
+	sc, err := skillcard.Parse(f)
+	f.Close()
+	if err != nil {
+		return fmt.Errorf("parsing skill.yaml: %w", err)
+	}
+
+	if sc.Provenance == nil {
+		sc.Provenance = &skillcard.Provenance{}
+	}
+	sc.Provenance.Source = ref
+	sc.Provenance.Commit = digest
+
+	wf, err := os.Create(skillPath)
+	if err != nil {
+		return fmt.Errorf("creating skill.yaml: %w", err)
+	}
+	defer wf.Close()
+	return skillcard.Serialize(sc, wf)
 }
