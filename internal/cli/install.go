@@ -118,6 +118,9 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	skillPath := filepath.Join(skillDir, "skill.yaml")
 	f, err := os.Open(skillPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return fmt.Errorf("opening skill.yaml: %w", err)
 	}
 	sc, err := skillcard.Parse(f)
