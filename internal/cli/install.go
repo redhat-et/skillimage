@@ -116,17 +116,20 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	}
 
 	skillPath := filepath.Join(skillDir, "skill.yaml")
+	var sc *skillcard.SkillCard
+
 	f, err := os.Open(skillPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("opening skill.yaml: %w", err)
 		}
-		return fmt.Errorf("opening skill.yaml: %w", err)
-	}
-	sc, err := skillcard.Parse(f)
-	_ = f.Close()
-	if err != nil {
-		return fmt.Errorf("parsing skill.yaml: %w", err)
+		sc = newSkillCardFromRef(ref)
+	} else {
+		sc, err = skillcard.Parse(f)
+		_ = f.Close()
+		if err != nil {
+			return fmt.Errorf("parsing skill.yaml: %w", err)
+		}
 	}
 
 	if sc.Provenance == nil {
@@ -141,4 +144,32 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	}
 	defer func() { _ = wf.Close() }()
 	return skillcard.Serialize(sc, wf)
+}
+
+func newSkillCardFromRef(ref string) *skillcard.SkillCard {
+	name := ref
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	version := "unknown"
+	if idx := strings.LastIndex(name, ":"); idx >= 0 {
+		version = name[idx+1:]
+		name = name[:idx]
+	}
+
+	namespace := "unknown"
+	if idx := strings.Index(ref, "/"); idx >= 0 {
+		namespace = ref[:idx]
+	}
+
+	return &skillcard.SkillCard{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCard",
+		Metadata: skillcard.Metadata{
+			Name:        name,
+			Namespace:   namespace,
+			Version:     version,
+			Description: "Installed from " + ref,
+		},
+	}
 }
