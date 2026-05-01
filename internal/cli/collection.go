@@ -356,9 +356,6 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 	}
 
 	skill := result.Skills[0]
-	if label == "" {
-		label = skill.Name
-	}
 
 	fmt.Fprintf(w, "  building...")
 

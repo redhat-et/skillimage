@@ -1,0 +1,10 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCollection
+metadata:
+  name: dev-skills
+  version: 0.1.0
+  description: Development collection with Git source and OCI image entries
+skills:
+  - source: https://github.com/anthropics/courses/tree/master/prompt_engineering_interactive_tutorial/skills/code-review
+  - name: document-summarizer
+    image: quay.io/skillimage/business/document-summarizer:1.0.0-testing
