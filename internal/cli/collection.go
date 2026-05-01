@@ -326,17 +326,23 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 		return "", err
 	}
 
-	if !force && label != "" {
-		installedSHA := readInstalledCommit(destDir, label)
-		if installedSHA != "" {
-			refToCheck := src.Ref
-			if refToCheck == "" {
-				refToCheck = "HEAD"
-			}
-			remoteSHA, lsErr := source.LsRemote(ctx, src.CloneURL, refToCheck)
-			if lsErr == nil && remoteSHA == installedSHA {
-				fmt.Fprintf(w, "  %s (source)  up to date\n", label)
-				return "skipped", nil
+	if !force {
+		lookupName := label
+		if lookupName == "" {
+			lookupName = filepath.Base(src.SubPath)
+		}
+		if lookupName != "" && lookupName != "." {
+			installedSHA := readInstalledCommit(destDir, lookupName)
+			if installedSHA != "" {
+				refToCheck := src.Ref
+				if refToCheck == "" {
+					refToCheck = "HEAD"
+				}
+				remoteSHA, lsErr := source.LsRemote(ctx, src.CloneURL, refToCheck)
+				if lsErr == nil && remoteSHA == installedSHA {
+					fmt.Fprintf(w, "  %s (source)  up to date\n", lookupName)
+					return "skipped", nil
+				}
 			}
 		}
 	}
