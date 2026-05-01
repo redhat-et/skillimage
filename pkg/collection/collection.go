@@ -22,8 +22,9 @@ type Metadata struct {
 }
 
 type SkillRef struct {
-	Name  string `yaml:"name"`
-	Image string `yaml:"image"`
+	Name   string `yaml:"name,omitempty"`
+	Image  string `yaml:"image,omitempty"`
+	Source string `yaml:"source,omitempty"`
 }
 
 func Parse(r io.Reader) (*SkillCollection, error) {
@@ -62,16 +63,20 @@ func Validate(col *SkillCollection) []string {
 	}
 	seen := make(map[string]bool)
 	for i, s := range col.Skills {
-		if s.Name == "" {
+		switch {
+		case s.Image != "" && s.Source != "":
+			errs = append(errs, fmt.Sprintf("skills[%d]: image and source are mutually exclusive", i))
+		case s.Image == "" && s.Source == "":
+			errs = append(errs, fmt.Sprintf("skills[%d]: image or source is required", i))
+		case s.Image != "" && s.Name == "":
 			errs = append(errs, fmt.Sprintf("skills[%d].name is required", i))
-		}
-		if s.Image == "" {
-			errs = append(errs, fmt.Sprintf("skills[%d].image is required", i))
 		}
 		if s.Name != "" && seen[s.Name] {
 			errs = append(errs, fmt.Sprintf("duplicate skill name %q", s.Name))
 		}
-		seen[s.Name] = true
+		if s.Name != "" {
+			seen[s.Name] = true
+		}
 	}
 	return errs
 }

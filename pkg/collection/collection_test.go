@@ -183,3 +183,83 @@ func TestGenerateKubeYAMLCustomMountRoot(t *testing.T) {
 		t.Errorf("expected custom mount root, got:\n%s", output)
 	}
 }
+
+func TestParseSourceField(t *testing.T) {
+	input := `apiVersion: skillimage.io/v1alpha1
+kind: SkillCollection
+metadata:
+  name: dev-skills
+  version: 0.1.0
+skills:
+  - source: https://github.com/myorg/skills/tree/main/code-reviewer
+  - name: stable-tool
+    image: quay.io/myorg/stable-tool:1.0.0
+`
+	col, err := collection.Parse(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if col.Skills[0].Source != "https://github.com/myorg/skills/tree/main/code-reviewer" {
+		t.Errorf("skill[0].source = %q", col.Skills[0].Source)
+	}
+	if col.Skills[1].Image != "quay.io/myorg/stable-tool:1.0.0" {
+		t.Errorf("skill[1].image = %q", col.Skills[1].Image)
+	}
+}
+
+func TestValidateSourceAndImageExclusive(t *testing.T) {
+	col := &collection.SkillCollection{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCollection",
+		Metadata:   collection.Metadata{Name: "test", Version: "1.0.0"},
+		Skills: []collection.SkillRef{
+			{Name: "both", Image: "quay.io/org/s:1.0.0", Source: "https://github.com/org/repo/tree/main/s"},
+		},
+	}
+	errs := collection.Validate(col)
+	found := false
+	for _, e := range errs {
+		if strings.Contains(e, "mutually exclusive") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected mutually exclusive error, got: %v", errs)
+	}
+}
+
+func TestValidateNeitherImageNorSource(t *testing.T) {
+	col := &collection.SkillCollection{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCollection",
+		Metadata:   collection.Metadata{Name: "test", Version: "1.0.0"},
+		Skills: []collection.SkillRef{
+			{Name: "empty"},
+		},
+	}
+	errs := collection.Validate(col)
+	found := false
+	for _, e := range errs {
+		if strings.Contains(e, "image or source is required") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected 'image or source is required' error, got: %v", errs)
+	}
+}
+
+func TestValidateSourceWithoutName(t *testing.T) {
+	col := &collection.SkillCollection{
+		APIVersion: "skillimage.io/v1alpha1",
+		Kind:       "SkillCollection",
+		Metadata:   collection.Metadata{Name: "test", Version: "1.0.0"},
+		Skills: []collection.SkillRef{
+			{Source: "https://github.com/org/repo/tree/main/skill"},
+		},
+	}
+	errs := collection.Validate(col)
+	if len(errs) != 0 {
+		t.Errorf("source without name should be valid, got errors: %v", errs)
+	}
+}
