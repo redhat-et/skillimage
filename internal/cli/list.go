@@ -2,8 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 	"text/tabwriter"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-et/skillimage/pkg/installed"
@@ -139,4 +142,34 @@ func runListInstalled(cmd *cobra.Command, target, outputDir string, upgradable b
 
 func resolveListTargets(target, outputDir string) (map[string]string, error) {
 	return resolveTargetDirs(target, outputDir, true)
+}
+
+func formatDigest(digest string, noTrunc bool) string {
+	if digest == "" {
+		return ""
+	}
+	if noTrunc {
+		return digest
+	}
+	if idx := strings.IndexByte(digest, ':'); idx >= 0 {
+		digest = digest[idx+1:]
+	}
+	if len(digest) > 12 {
+		digest = digest[:12]
+	}
+	return digest
+}
+
+func formatCreated(created string, noTrunc bool) string {
+	if created == "" {
+		return ""
+	}
+	if noTrunc {
+		return created
+	}
+	t, err := time.Parse(time.RFC3339, created)
+	if err != nil {
+		return created
+	}
+	return humanize.Time(t)
 }
