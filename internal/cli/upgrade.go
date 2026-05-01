@@ -157,7 +157,7 @@ func upgradeSkill(ctx context.Context, client *oci.Client, c installed.UpgradeCa
 		return fmt.Errorf("unpacking %s: %w", c.LatestRef, err)
 	}
 
-	if err := writeProvenance(ctx, client, c.LatestRef, c.Installed.Path); err != nil {
+	if err := WriteProvenance(ctx, client, c.LatestRef, c.Installed.Path); err != nil {
 		return fmt.Errorf("writing provenance: %w", err)
 	}
 

@@ -104,7 +104,7 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 	dest := filepath.Join(outputDir, oci.SkillNameFromRef(ref))
 
 	// Write provenance into skill.yaml.
-	if err := writeProvenance(ctx, client, ref, dest); err != nil {
+	if err := WriteProvenance(ctx, client, ref, dest); err != nil {
 		return fmt.Errorf("writing provenance: %w", err)
 	}
 
@@ -112,7 +112,7 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 	return nil
 }
 
-func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir string) error {
+func WriteProvenance(ctx context.Context, client *oci.Client, ref, skillDir string) error {
 	digest, err := client.ResolveDigest(ctx, ref)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("opening skill.yaml: %w", err)
 		}
-		sc = newSkillCardFromRef(ref)
+		sc = NewSkillCardFromRef(ref)
 	} else {
 		sc, err = skillcard.Parse(f)
 		_ = f.Close()
@@ -175,7 +175,7 @@ func tagFromRef(ref string) string {
 	return ""
 }
 
-func newSkillCardFromRef(ref string) *skillcard.SkillCard {
+func NewSkillCardFromRef(ref string) *skillcard.SkillCard {
 	name := oci.SkillNameFromRef(ref)
 
 	version := tagFromRef(ref)
