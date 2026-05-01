@@ -118,9 +118,11 @@ func runUpgrade(cmd *cobra.Command, skillName, target, outputDir string, all, sk
 
 	ctx := cmd.Context()
 	var upgraded int
+	var lastErr error
 	for _, c := range candidates {
 		if err := upgradeSkill(ctx, client, c, skipTLSVerify); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Error upgrading %s: %v\n", c.Installed.Name, err)
+			lastErr = err
 			continue
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Upgraded %s %s → %s (%s)\n",
@@ -130,6 +132,13 @@ func runUpgrade(cmd *cobra.Command, skillName, target, outputDir string, all, sk
 
 	if all && upgraded > 0 {
 		fmt.Fprintf(cmd.OutOrStdout(), "\nUpgraded %d skill(s).\n", upgraded)
+	}
+
+	if !all && lastErr != nil {
+		return fmt.Errorf("upgrading %s: %w", skillName, lastErr)
+	}
+	if all && upgraded == 0 && lastErr != nil {
+		return fmt.Errorf("no skills were upgraded due to errors")
 	}
 
 	return nil

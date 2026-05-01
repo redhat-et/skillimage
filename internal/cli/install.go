@@ -158,8 +158,8 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 // tagFromRef extracts the tag portion from a ref like
 // "quay.io/acme/skill:1.0.0". Returns empty string if no tag.
 func tagFromRef(ref string) string {
-	if idx := strings.Index(ref, "@"); idx >= 0 {
-		return ref[idx+1:]
+	if strings.Contains(ref, "@") {
+		return ""
 	}
 	lastSlash := strings.LastIndex(ref, "/")
 	if lastSlash < 0 {

@@ -32,7 +32,7 @@ func TestNewSkillCardFromRef(t *testing.T) {
 		{
 			ref:      "ns/skill@sha256:abc123",
 			wantName: "skill",
-			wantVer:  "sha256:abc123",
+			wantVer:  "unknown",
 			wantNS:   "ns",
 		},
 	}
