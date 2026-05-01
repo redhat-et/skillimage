@@ -87,6 +87,36 @@ func TestGenerateSkillCardColonSeparatedName(t *testing.T) {
 	}
 }
 
+func TestGenerateSkillCardColonEdgeCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantName  string
+		wantNS    string
+	}{
+		{"multiple colons", "foo:bar:baz", "bar:baz", "foo"},
+		{"leading colon", ":bar", ":bar", "org"},
+		{"trailing colon", "\"foo:\"", "foo:", "org"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeSkillMD(t, dir, "---\nname: "+tt.input+"\n---\nContent.")
+
+			sc, err := source.GenerateSkillCard(dir, "https://github.com/org/repo.git", "org")
+			if err != nil {
+				t.Fatalf("GenerateSkillCard: %v", err)
+			}
+			if sc.Metadata.Name != tt.wantName {
+				t.Errorf("Name = %q, want %q", sc.Metadata.Name, tt.wantName)
+			}
+			if sc.Metadata.Namespace != tt.wantNS {
+				t.Errorf("Namespace = %q, want %q", sc.Metadata.Namespace, tt.wantNS)
+			}
+		})
+	}
+}
+
 func TestGenerateSkillCardFrontmatterNamespace(t *testing.T) {
 	dir := t.TempDir()
 	writeSkillMD(t, dir, "---\nname: resume-reviewer\ndescription: Reviews resumes.\nmetadata:\n  namespace: business/hr\n---\nContent.")
