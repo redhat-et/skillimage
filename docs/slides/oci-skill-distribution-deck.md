@@ -306,7 +306,7 @@ test results, usage metrics) can be added without breaking existing skills.
 
 ## Image Volumes: Mount Skills <span class="accent">Directly</span>
 
-On OpenShift 4.20+ / K8s 1.33+, mount an OCI image as a **read-only volume** — no init container needed.
+On OpenShift 4.20+ / K8s 1.33+, mount an OCI image as a **read-only volume**.
 
 ```yaml
 volumes:
