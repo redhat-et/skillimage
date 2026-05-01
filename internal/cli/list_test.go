@@ -39,6 +39,11 @@ func TestFormatDigest(t *testing.T) {
 			want:    "sha256:a593244d38f0e1b2c3d4e5f6a7b8c9d0e1f2a3b4",
 		},
 		{
+			name:   "digest exactly 12 chars no prefix",
+			digest: "a593244d38f0",
+			want:   "a593244d38f0",
+		},
+		{
 			name:   "empty digest",
 			digest: "",
 			want:   "",
