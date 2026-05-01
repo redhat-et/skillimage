@@ -86,6 +86,17 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 	}
 
 	ctx := cmd.Context()
+
+	// If the ref looks remote, pull it first if not already in the local store.
+	if !looksLocal(ref) {
+		if _, err := client.ResolveDigest(ctx, ref); err != nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Pulling %s...\n", ref)
+			if _, pullErr := client.Pull(ctx, ref, oci.PullOptions{}); pullErr != nil {
+				return fmt.Errorf("pulling %s: %w", ref, pullErr)
+			}
+		}
+	}
+
 	if err := client.Unpack(ctx, ref, outputDir); err != nil {
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}
@@ -130,6 +141,12 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	sc.Provenance.Source = ref
 	sc.Provenance.Commit = digest
 
+	// Update version from the ref tag so it stays in sync with
+	// what was actually installed (the tag is authoritative).
+	if tag := tagFromRef(ref); tag != "" {
+		sc.Metadata.Version = tag
+	}
+
 	wf, err := os.Create(skillPath)
 	if err != nil {
 		return fmt.Errorf("creating skill.yaml: %w", err)
@@ -138,14 +155,32 @@ func writeProvenance(ctx context.Context, client *oci.Client, ref, skillDir stri
 	return skillcard.Serialize(sc, wf)
 }
 
+// tagFromRef extracts the tag portion from a ref like
+// "quay.io/acme/skill:1.0.0". Returns empty string if no tag.
+func tagFromRef(ref string) string {
+	if strings.Contains(ref, "@") {
+		return ""
+	}
+	lastSlash := strings.LastIndex(ref, "/")
+	if lastSlash < 0 {
+		if idx := strings.LastIndex(ref, ":"); idx >= 0 {
+			return ref[idx+1:]
+		}
+		return ""
+	}
+	tail := ref[lastSlash+1:]
+	if idx := strings.LastIndex(tail, ":"); idx >= 0 {
+		return tail[idx+1:]
+	}
+	return ""
+}
+
 func newSkillCardFromRef(ref string) *skillcard.SkillCard {
 	name := oci.SkillNameFromRef(ref)
 
-	version := "unknown"
-	if idx := strings.Index(ref, "@"); idx >= 0 {
-		version = ref[idx+1:]
-	} else if idx := strings.LastIndex(ref, ":"); idx >= 0 {
-		version = ref[idx+1:]
+	version := tagFromRef(ref)
+	if version == "" {
+		version = "unknown"
 	}
 
 	namespace := "unknown"

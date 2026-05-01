@@ -123,3 +123,16 @@ func FetchManifestAnnotations(ctx context.Context, registryURL, repoName, tag st
 		Annotations: manifest.Annotations,
 	}, nil
 }
+
+// ListTagsForRepo lists all tags for a repository given a full
+// repository reference without a tag (e.g., "quay.io/acme/skill").
+// This is a convenience wrapper around ListRemoteTags.
+func ListTagsForRepo(ctx context.Context, repo string, skipTLSVerify bool) ([]string, error) {
+	idx := strings.Index(repo, "/")
+	if idx < 0 {
+		return nil, fmt.Errorf("invalid repository reference: %s (no registry host)", repo)
+	}
+	registry := repo[:idx]
+	repoName := repo[idx+1:]
+	return ListRemoteTags(ctx, registry, repoName, skipTLSVerify)
+}

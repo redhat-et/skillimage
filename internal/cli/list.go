@@ -2,20 +2,19 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-et/skillimage/pkg/installed"
+	"github.com/redhat-et/skillimage/pkg/oci"
 )
 
 func newListCmd() *cobra.Command {
 	var showInstalled bool
 	var target string
 	var outputDir string
+	var upgradable bool
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -35,8 +34,11 @@ Supported targets for --installed:
   openclaw  ~/.openclaw/skills/`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if upgradable && !showInstalled {
+				return fmt.Errorf("--upgradable requires --installed")
+			}
 			if showInstalled {
-				return runListInstalled(cmd, target, outputDir)
+				return runListInstalled(cmd, target, outputDir, upgradable)
 			}
 			return runList(cmd)
 		},
@@ -45,6 +47,7 @@ Supported targets for --installed:
 	cmd.Flags().BoolVarP(&showInstalled, "installed", "i", false, "list installed skills")
 	cmd.Flags().StringVarP(&target, "target", "t", "", "filter to a specific agent target")
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "scan a custom directory")
+	cmd.Flags().BoolVarP(&upgradable, "upgradable", "u", false, "show only upgradable skills (requires --installed)")
 
 	return cmd
 }
@@ -78,7 +81,7 @@ func runList(cmd *cobra.Command) error {
 	return w.Flush()
 }
 
-func runListInstalled(cmd *cobra.Command, target, outputDir string) error {
+func runListInstalled(cmd *cobra.Command, target, outputDir string, upgradable bool) error {
 	if target != "" && outputDir != "" {
 		return fmt.Errorf("use --target or -o, not both")
 	}
@@ -93,59 +96,47 @@ func runListInstalled(cmd *cobra.Command, target, outputDir string) error {
 		return fmt.Errorf("scanning installed skills: %w", err)
 	}
 
-	if len(skills) == 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "No installed skills found.")
+	if !upgradable {
+		if len(skills) == 0 {
+			fmt.Fprintln(cmd.OutOrStdout(), "No installed skills found.")
+			return nil
+		}
+
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "NAME\tVERSION\tSOURCE\tTARGET")
+		for _, s := range skills {
+			source := s.Source
+			if source == "" {
+				source = "(local)"
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Name, s.Version, source, s.Target)
+		}
+		return w.Flush()
+	}
+
+	candidates, err := installed.CheckUpgrades(cmd.Context(), skills,
+		installed.CheckOptions{
+			TagLister: oci.ListTagsForRepo,
+		})
+	if err != nil {
+		return fmt.Errorf("checking upgrades: %w", err)
+	}
+
+	if len(candidates) == 0 {
+		fmt.Fprintln(cmd.OutOrStdout(), "All installed skills are up to date.")
 		return nil
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tVERSION\tSOURCE\tTARGET")
-	for _, s := range skills {
-		source := s.Source
-		if source == "" {
-			source = "(local)"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Name, s.Version, source, s.Target)
+	fmt.Fprintln(w, "NAME\tVERSION\tLATEST\tSOURCE\tTARGET")
+	for _, c := range candidates {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			c.Installed.Name, c.Installed.Version, c.LatestVersion,
+			c.LatestRef, c.Installed.Target)
 	}
 	return w.Flush()
 }
 
 func resolveListTargets(target, outputDir string) (map[string]string, error) {
-	if outputDir != "" {
-		if strings.HasPrefix(outputDir, "~/") || outputDir == "~" {
-			h, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("finding home directory: %w", err)
-			}
-			outputDir = filepath.Join(h, outputDir[1:])
-		}
-		abs, err := filepath.Abs(outputDir)
-		if err != nil {
-			return nil, fmt.Errorf("resolving path: %w", err)
-		}
-		return map[string]string{outputDir: abs}, nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("finding home directory: %w", err)
-	}
-
-	if target != "" {
-		relPath, ok := agentTargets[strings.ToLower(target)]
-		if !ok {
-			var names []string
-			for k := range agentTargets {
-				names = append(names, k)
-			}
-			return nil, fmt.Errorf("unknown target %q (supported: %s)", target, strings.Join(names, ", "))
-		}
-		return map[string]string{target: filepath.Join(home, relPath)}, nil
-	}
-
-	targets := make(map[string]string, len(agentTargets))
-	for name, relPath := range agentTargets {
-		targets[name] = filepath.Join(home, relPath)
-	}
-	return targets, nil
+	return resolveTargetDirs(target, outputDir, true)
 }
