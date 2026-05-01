@@ -112,33 +112,27 @@ Package, sign, and distribute agent skills as OCI artifacts — using the same r
 
 <!--
 Tips: Arrow keys or click to navigate. Press N to toggle notes.
-Context: This feature was implemented in PR #21 on redhat-et/docsclaw.
-The design spec is at docs/dev/2026-04-12-oci-skill-distribution-design.md.
+Project: github.com/redhat-et/skillimage
 -->
 
 ---
 
 ## Your Agent Is Only as Good as Its <span class="accent">Skills</span>
 
-Skills are the unit of specialization. Each skill lives in its own subdirectory and gives the agent domain expertise.
+Skills are the unit of specialization. Each skill gives the agent domain expertise.
 
 - **SKILL.md** — instructions in Agent Skills spec format
-- **skill.yaml** — metadata: tools, resources, versioning
+- **skill.yaml** — metadata: versioning, compatibility, licensing
 
 ```
 skills/
 ├── resume-screener/
 │   ├── SKILL.md
 │   └── skill.yaml
-├── policy-comparator/
-│   ├── SKILL.md
-│   └── skill.yaml
-└── checklist-auditor/
+└── policy-comparator/
     ├── SKILL.md
     └── skill.yaml
 ```
-
-<span class="muted small">Agent Skills Specification — agentskills.io</span>
 
 <!--
 Agent Skills Specification: agentskills.io/specification
@@ -195,9 +189,7 @@ healthcare, government).
 
 ## OCI Is Not Just for <span class="accent">Container Images</span>
 
-The OCI Distribution Specification is **content-agnostic**. Any blob + a manifest + a media type = a valid OCI artifact.
-
-The **ORAS** project (OCI Registry As Storage) makes this practical: push any content to any OCI registry with standard tooling.
+The OCI Distribution Spec is **content-agnostic**. Any blob + manifest + media type = a valid artifact. **ORAS** makes this practical.
 
 <span class="tag">Helm Charts</span> <span class="tag">WASM Modules</span> <span class="tag">ML Models</span> <span class="tag">Policy Bundles</span> <span class="tag-accent">Agent Skills</span>
 
@@ -211,8 +203,6 @@ The **ORAS** project (OCI Registry As Storage) makes this practical: push any co
 │   Images     │  │   Charts     │  │   Skills ★   │
 └──────────────┘  └──────────────┘  └──────────────┘
 ```
-
-<span class="muted small">ORAS — oras.land · OCI Distribution Spec</span>
 
 <!--
 ORAS (OCI Registry As Storage): oras.land
@@ -231,10 +221,10 @@ No infrastructure changes needed.
 ## A Skill Becomes an <span class="accent">OCI Artifact</span>
 
 ```
-Skill Directory  →  skillctl pack  →  OCI Layout  →  skillctl push  →  Registry
+Skill Directory  →  skillctl build  →  OCI Image  →  skillctl push  →  Registry
 ```
 
-**What goes into the artifact:**
+**What goes into the image:**
 - `SKILL.md` — instructions
 - `skill.yaml` — SkillCard metadata
 - Any supporting files in the directory
@@ -245,47 +235,45 @@ Skill Directory  →  skillctl pack  →  OCI Layout  →  skillctl push  →  R
 - Cosign / sigstore signatures
 
 <!--
-Community alignment: This implementation aligns with the Agent Skills OCI Artifacts
-Specification by Thomas Vitale.
+Skills are packaged as standard OCI images (FROM scratch), not ORAS artifacts.
+This means podman pull, skopeo copy, and Kubernetes ImageVolumes all work natively.
 
 Media types used:
 - application/vnd.oci.image.layer.v1.tar+gzip (skill content layer)
-- application/vnd.oci.image.config.v1+json (config with SkillCard metadata)
+- application/vnd.oci.image.config.v1+json (config)
 
-The custom annotations (io.docsclaw.skill.*) carry SkillCard metadata in the manifest
-for fast inspection without pulling the full layer.
+Skill metadata is stored in OCI manifest annotations (io.skillimage.*) for fast
+inspection without pulling the full layer.
 -->
 
 ---
 
-## The Workflow: <span class="accent">Pack, Push, Mount</span>
+## The Workflow: <span class="accent">Build, Push, Install</span>
 
 ```bash
-# Pack skill into a local OCI layout
-$ skillctl pack examples/skills/resume-screener
-Packed skill → oci-layout · sha256:65af81ce... · 1226 bytes
+# Build skill into a local OCI image
+$ skillctl build skills/resume-screener/
+Built resume-screener:1.0.0-draft (sha256:65af...)
 
-# Push to registry (uses podman/docker credentials)
-$ skillctl push examples/skills/resume-screener \
-    quay.io/docsclaw/skill-resume-screener:1.0.0
-Pushed → quay.io/docsclaw/skill-resume-screener:1.0.0
+# Tag and push to registry
+$ skillctl tag resume-screener:1.0.0-draft \
+    quay.io/myorg/resume-screener:1.0.0-draft
+$ skillctl push quay.io/myorg/resume-screener:1.0.0-draft
 
-# Push as mountable image (for image volumes)
-$ skillctl push --as-image examples/skills/resume-screener \
-    quay.io/docsclaw/skill-resume-screener:1.0.0-image
-
-# Inspect remotely (no download needed)
-$ skillctl inspect quay.io/docsclaw/skill-resume-screener:1.0.0
-Name: resume-screener · Version: 1.0.0 · Tools: [read_file]
+# Install directly from registry to Claude Code
+$ skillctl install quay.io/myorg/resume-screener:1.0.0 \
+    --target claude
+Pulling quay.io/myorg/resume-screener:1.0.0...
+Installed to ~/.claude/skills/resume-screener
 ```
 
 <!--
-The --as-image flag produces an OCI image (with rootfs layer) instead of an OCI artifact.
-This is required for Kubernetes image volumes, which expect a proper container image that
-the kubelet can pull via the container runtime.
+skillctl build produces standard OCI images (FROM scratch). Since skills are OCI images,
+podman pull, skopeo copy, and Kubernetes ImageVolumes all work natively.
 
-Credential resolution is automatic: skillctl reads podman/docker auth configs, so if you've
-done 'podman login quay.io', push/pull just works.
+Install auto-pulls from remote registries if the image isn't in the local store.
+Provenance (source registry and digest) is recorded in the installed skill's skill.yaml
+for later upgrade tracking.
 -->
 
 ---
@@ -293,34 +281,22 @@ done 'podman login quay.io', push/pull just works.
 ## Every Skill Has a <span class="accent">Machine-Readable Identity</span>
 
 ```
-$ skillctl inspect quay.io/docsclaw/skill-resume-screener:1.0.0
-
-Name:          resume-screener
-Namespace:     official
-Version:       1.0.0
-Description:   Screen resumes against a job description...
-Author:        Red Hat ET
-License:       Apache-2.0
-Tools:         [read_file]
-Memory:        32Mi
-CPU:           100m
+$ skillctl inspect quay.io/myorg/resume-screener:1.0.0
+Name:     myorg/resume-screener    Version: 1.0.0
+Status:   published                License: Apache-2.0
+Authors:  Red Hat OCTO             Compat:  claude-3.5-sonnet
+Tags:     ["hr","screening"]
 ```
 
 **What SkillCard enables:**
-- 🔍 **Discovery** — search by name, namespace, category, author
-- 📐 **Resource planning** — CPU and memory hints before deployment
-- 🔗 **Compatibility** — required tools, dependencies, min agent version
-- ✅ **Governance** — license, author, namespace for org-level trust policies
-
-> **Future: Skill Catalog** — A UI that queries registries, reads SkillCards, and presents a searchable catalog — browse by category, check signing status, deploy with one click.
+- **Discovery** — search by name, namespace, tags, author
+- **Lifecycle** — draft → testing → published → deprecated
+- **Compatibility** — target model compatibility hints
+- **Governance** — license, author, namespace for trust policies
 
 <!--
-SkillCard schema: docsclaw.io/v1alpha1 kind: SkillCard. The metadata travels inside the
-OCI manifest annotations, so 'skill inspect' reads it without pulling the full layer.
-
-Future vision: a Skill Catalog UI that queries registries, reads SkillCard metadata, and
-presents a searchable, browsable catalog of available skills — like a curated app store
-for agent capabilities.
+SkillCard schema: skillimage.io/v1alpha1 kind: SkillCard. The metadata travels inside the
+OCI manifest annotations, so 'skillctl inspect' reads it without pulling the full layer.
 
 The SkillCard schema is intentionally extensible: additional fields (compatibility matrix,
 test results, usage metrics) can be added without breaking existing skills.
@@ -330,25 +306,24 @@ test results, usage metrics) can be added without breaking existing skills.
 
 ## Image Volumes: Mount Skills <span class="accent">Directly</span>
 
-On OpenShift 4.20+ / Kubernetes 1.33+, the kubelet can mount an OCI image as a **read-only volume** — no init container needed.
-
-- Kubelet pulls and caches skill images
-- Read-only mount — immutable at runtime
-- No emptyDir, no node storage consumed
+On OpenShift 4.20+ / K8s 1.33+, mount an OCI image as a **read-only volume**.
 
 ```yaml
 volumes:
-  - name: skill-resume-screener
+  - name: resume-screener
     image:
-      reference: quay.io/docsclaw/skill-resume-screener:1.0.0
+      reference: quay.io/myorg/resume-screener:1.0.0
       pullPolicy: IfNotPresent
-
 containers:
-  - name: docsclaw
+  - name: agent
     volumeMounts:
-      - name: skill-resume-screener
+      - name: resume-screener
         mountPath: /skills/resume-screener
 ```
+
+- Kubelet pulls and caches skill images automatically
+- Read-only mount — immutable at runtime
+- Same pull policies, pull secrets, and mirrors as container images
 
 <span class="muted small">KEP-4639 · Kubernetes 1.33+ · OpenShift 4.20+</span>
 
@@ -367,24 +342,23 @@ This is the exact same mechanism used for container images, so existing image pu
 
 ## Init Container for <span class="accent">Older Clusters</span>
 
-For Kubernetes < 1.33 or OpenShift < 4.20, use skillctl as an init container to pull skills before the agent starts.
-
-- Pull at pod startup, verify signatures
-- Cache on a PVC across restarts
-- Share the volume with the main container
+For K8s < 1.33 / OpenShift < 4.20, use skillctl as an init container.
 
 ```yaml
 initContainers:
   - name: skill-puller
     image: ghcr.io/redhat-et/skillctl:latest
-    command:
-      - "skillctl"
-      - "pull"
-      - "--verify"
-      - "-o"
-      - "/skills"
-      - "quay.io/docsclaw/skill-resume-screener:1.0.0"
+    command: ["skillctl", "pull", "--verify",
+              "-o", "/skills",
+              "quay.io/myorg/resume-screener:1.0.0"]
+    volumeMounts:
+      - name: skills
+        mountPath: /skills
 ```
+
+- Pull and verify signatures at pod startup
+- Cache on a PVC across restarts
+- Share the volume with the agent container
 
 <!--
 For older clusters, the init container approach uses skillctl to pull skills from the
@@ -401,12 +375,12 @@ verification before extracting the skill.
 
 | | Before | After (OCI) |
 | --- | ------ | ----------- |
-| **Distribution** | git clone or manual copy | Push/pull with standard tooling |
+| **Distribution** | git clone or manual copy | `skillctl install` from registry |
 | **Versioning** | Branch/tag only | Semver tags + immutable digests |
+| **Upgrades** | Manual re-clone | `skillctl upgrade` with version check |
 | **Signing** | None | Cosign / sigstore signing |
 | **Audit** | No trail | Registry access logs |
 | **Auth** | Repo level only | Per-namespace RBAC + pull secrets |
-| **Size** | ConfigMap 1 MiB limit | No limits |
 | **Runtime** | Mutable | Read-only image volume mount |
 
 <!--
@@ -419,23 +393,19 @@ pull policies — we're just reusing existing infrastructure.
 
 ## Disconnected and <span class="accent">Air-Gapped</span> Environments
 
-Many enterprise OpenShift clusters operate in restricted networks with no external registry access. Skills must reach these environments reliably.
-
-**oc-mirror** can mirror skill images alongside operator bundles to an internal registry — if the skill uses a recognizable MIME type.
+**oc-mirror** mirrors skill images alongside operator bundles to internal registries.
 
 ```text
-Connected                              Disconnected
-┌──────────┐   oc-mirror   ┌──────────────────────────┐
-│ Quay.io  │ ───────────── │ Internal OCP Registry    │
-│          │   (mirrored)  │ image-registry.svc:5000  │
-└──────────┘               └──────────────────────────┘
-  Skills +                   Skills + Operators +
-  Operators                  Signatures preserved
+Connected                           Disconnected
+┌──────────┐   oc-mirror   ┌────────────────────────┐
+│ Quay.io  │ ────────────▸ │ Internal OCP Registry  │
+└──────────┘               └────────────────────────┘
+  Skills + Operators         Mirrored with signatures
 ```
 
-- **OLM integration** — skills as related images in operator bundles, mirrored automatically
-- **Internal registry** — pull from the cluster's built-in image registry, no external access needed
-- **Signature preservation** — cosign signatures survive the mirror, verified at admission
+- **OLM integration** — skills as related images, mirrored automatically
+- **Internal registry** — same `skillctl pull` workflow, no external access
+- **Signatures preserved** — cosign signatures survive the mirror
 
 <!--
 The OpenShift platform team is also building support for this. The oc-mirror tool needs a
@@ -456,55 +426,70 @@ automatically includes the skill images.
 
 ## Multiple <span class="accent">Consumption</span> Paths
 
-Not every consumer can mount OCI images. skillctl supports multiple ways to get skills where they need to go.
+Skills are standard OCI images — any tool that pulls images can consume them.
 
 | Method | Command | Best for |
 | ------ | ------- | -------- |
-| **Image volume** | Pod spec `volumes.image` | OpenShift 4.20+ / K8s 1.33+ |
+| **skillctl install** | `skillctl install <ref> --target claude` | Developer workstations |
+| **Image volume** | Pod spec `volumes.image` | K8s 1.33+ / OCP 4.20+ |
 | **Init container** | `skillctl pull -o /skills` | Older clusters |
-| **CLI pull** | `skillctl pull -o ~/.claude/skills` | Developer workstations |
 | **Container extract** | `podman create` + `podman cp` | No skillctl installed |
-| **Zip download** | Artifact repo or registry | Non-OCI-aware tools |
 
 ```bash
-# No skillctl? Use podman to extract skill files directly:
-$ podman create --name tmp quay.io/skills/resume-screener:1.0.0
-$ podman cp tmp:/skills/resume-screener ./skills/
-$ podman rm tmp
+# One-command install (auto-pulls from registry):
+$ skillctl install quay.io/myorg/resume-screener:1.0.0 --target claude
 ```
 
 <!--
-The podman/docker extraction path is important for users who don't want to install
-skillctl. Since skills are standard OCI images, any container runtime can pull and
-extract the content.
+skillctl install is the simplest path for developers. Supports Claude Code, Cursor,
+Windsurf, OpenCode, and OpenClaw. Since skills are standard OCI images, any container
+runtime can also pull and extract the content.
+-->
 
-Zip format: skillctl can bundle a .zip alongside the OCI image for consumers that
-can't work with OCI natively (e.g. some coding assistants). Low implementation
-effort — just create a zip of the skill directory and push as an additional layer
-or separate artifact.
+---
 
-Ann Marie Fred (OpenShift AI) noted that coding assistants can't natively load OCI
-artifacts yet. Multiple consumption paths lower the barrier to adoption.
+## Brew-Style <span class="accent">Skill Management</span>
+
+Like `dnf` for AI skills — install, list, upgrade in one command each.
+
+```bash
+$ skillctl install quay.io/myorg/code-reviewer:1.0.0 --target claude
+Installed to ~/.claude/skills/code-reviewer
+
+$ skillctl list --installed --upgradable --target claude
+NAME            VERSION  LATEST  SOURCE                             TARGET
+code-reviewer   1.0.0    2.0.0   quay.io/myorg/code-reviewer:2.0.0  claude
+
+$ skillctl upgrade code-reviewer --target claude
+Upgraded code-reviewer 1.0.0 → 2.0.0 (claude)
+
+$ skillctl upgrade --all --target claude
+All skills are up to date.
+```
+
+<!--
+skillctl tracks provenance (source registry and digest) in each installed skill's
+skill.yaml. This lets it check for newer published versions and upgrade in place.
+
+The upgrade command only considers published versions (no -draft or -testing suffixes)
+and uses strict semver comparison. Local skills without provenance are skipped.
 -->
 
 ---
 
 ## Try It <span class="accent">Today</span>
 
-- 💻 **Hands-on:** spin up a local Zot registry, pack a skill, push, inspect, pull — 5 minutes end to end
-- 🔀 **Review the PR:** design decisions, media types, and annotation schema are documented in the design spec — feedback welcome
-- 🤝 **Community:** should we propose SkillCard alignment to the Agent Skills OCI Artifacts Specification?
-- 🔏 **Next milestone:** full sigstore integration for keyless skill signing and verification
-- 🏢 **OpenShift alignment:** the platform team is building support for oc-mirror, OLM integration, and admission control
+- 💻 **Install:** `brew install pavelanni/tap/skillctl` — build, push, install, upgrade in minutes
+- 🔄 **Full lifecycle:** build → promote → push → install → upgrade → remove
+- 🤝 **Community:** SkillCard aligns with the Agent Skills OCI Artifacts Specification
+- 🔏 **Next milestone:** sigstore integration for keyless skill signing and verification
+- 🏢 **OpenShift alignment:** oc-mirror, OLM integration, and admission control
 
-<span class="tag-accent">github.com/redhat-et/docsclaw</span>
+<span class="tag-accent">github.com/redhat-et/skillimage</span>
 
 <!--
 Resources:
-- OpenShift platform: agent skill packaging, OLM operator integration, skill discovery
-- PR #21: github.com/redhat-et/docsclaw/pull/21
-- Design spec: docs/dev/2026-04-12-oci-skill-distribution-design.md
-- OCI skills guide: docs/oci-skills-guide.md
+- Project: github.com/redhat-et/skillimage
 - Agent Skills OCI Spec: github.com/ThomasVitale/agents-skills-oci-artifacts-spec
 - ORAS project: oras.land
 - Zot registry: zotregistry.dev

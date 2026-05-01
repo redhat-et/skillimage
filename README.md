@@ -140,6 +140,61 @@ easier to find skills in both local and remote listings.
 Authentication uses your existing `~/.docker/config.json` or
 Podman's `auth.json` -- no separate login needed.
 
+### Install skills for AI agents
+
+Install skills directly into an agent's skill directory. If the
+image isn't in the local store, skillctl pulls it automatically.
+
+```bash
+# Install to Claude Code's skill directory
+skillctl install quay.io/myorg/hello-world:1.0.0 --target claude
+
+# Install to another agent
+skillctl install quay.io/myorg/hello-world:1.0.0 --target opencode
+
+# Install to a custom directory
+skillctl install quay.io/myorg/hello-world:1.0.0 -o ~/custom/skills/
+```
+
+Supported targets: `claude`, `cursor`, `windsurf`, `opencode`,
+`openclaw`.
+
+After installing, skillctl records provenance (source registry
+and digest) in the skill's `skill.yaml` so upgrades can find
+the original source.
+
+### List and upgrade installed skills
+
+```bash
+# List installed skills across all agent directories
+skillctl list --installed
+
+# List installed skills for a specific agent
+skillctl list --installed --target claude
+
+# Check which skills have newer published versions
+skillctl list --installed --upgradable
+
+# Upgrade a specific skill
+skillctl upgrade hello-world --target claude
+
+# Upgrade all skills for an agent
+skillctl upgrade --all --target claude
+```
+
+### Remove local images
+
+```bash
+# Remove a skill image from the local store
+skillctl rm examples/hello-world:1.0.0-draft
+
+# Remove multiple images
+skillctl rm ref1:tag ref2:tag
+
+# Skip confirmation prompt
+skillctl rm examples/hello-world:1.0.0-draft --force
+```
+
 ### Inspect with standard tools
 
 Skill images are standard OCI images. You can inspect metadata
@@ -267,7 +322,9 @@ make fmt         # Format code
 | `internal/cli/` | Cobra commands |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
 | `pkg/oci/` | OCI image build/push/pull/inspect/promote |
+| `pkg/installed/` | Installed skill discovery and upgrade checking |
 | `pkg/lifecycle/` | State machine, tag rules |
+| `pkg/source/` | Remote Git source resolution |
 | `schemas/` | JSON Schema for SkillCard |
 | `examples/` | Sample skills |
 | `docs/` | Design specs and research |
@@ -282,9 +339,11 @@ pipelines, and other tools can import the library directly.
 consumers: skillctl CLI, agent runtimes, CI/CD
       |
   pkg/ (public Go API)
-  +-- skillcard/  parse, validate, serialize
-  +-- oci/        build, push, pull, inspect, promote
-  +-- lifecycle/  state machine, tag rules
+  +-- skillcard/   parse, validate, serialize
+  +-- oci/         build, push, pull, inspect, promote
+  +-- installed/   scan, upgrade checking
+  +-- lifecycle/   state machine, tag rules
+  +-- source/      remote Git source resolution
       |
   OCI registries (quay.io, ghcr.io, Zot)
 ```

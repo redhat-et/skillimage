@@ -29,8 +29,10 @@ make fmt         # Format code
 | `internal/server/` | Router, middleware |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
 | `pkg/oci/` | Build/push/pull/inspect (oras-go) |
+| `pkg/installed/` | Installed skill scanning and upgrade checking |
 | `pkg/verify/` | Sigstore signature verification |
 | `pkg/lifecycle/` | State machine, semver rules |
+| `pkg/source/` | Remote Git source resolution |
 | `pkg/diff/` | Version comparison |
 | `schemas/` | JSON Schema for SkillCard |
 | `api/` | OpenAPI 3.1 spec |
