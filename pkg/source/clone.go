@@ -14,7 +14,8 @@ import (
 var commitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
 type CloneOptions struct {
-	RefOverride string
+	RefOverride    string
+	DisableSparse  bool
 }
 
 type CloneResult struct {
@@ -47,7 +48,7 @@ func Clone(ctx context.Context, src GitSource, opts CloneOptions) (*CloneResult,
 		ref = src.Ref
 	}
 
-	if err := cloneRepo(ctx, src.CloneURL, ref, src.SubPath, tmpDir); err != nil {
+	if err := cloneRepo(ctx, src.CloneURL, ref, src.SubPath, tmpDir, opts.DisableSparse); err != nil {
 		cleanup()
 		return nil, err
 	}
@@ -74,12 +75,12 @@ func isCommitSHA(ref string) bool {
 	return commitSHAPattern.MatchString(ref)
 }
 
-func cloneRepo(ctx context.Context, cloneURL, ref, subPath, destDir string) error {
+func cloneRepo(ctx context.Context, cloneURL, ref, subPath, destDir string, disableSparse bool) error {
 	if isCommitSHA(ref) {
 		return cloneAtCommit(ctx, cloneURL, ref, destDir)
 	}
 
-	if subPath != "" {
+	if subPath != "" && !disableSparse {
 		if err := sparseClone(ctx, cloneURL, ref, subPath, destDir); err == nil {
 			return nil
 		}

@@ -55,6 +55,15 @@ func Resolve(ctx context.Context, input string, ref string, filter string) (*Res
 	}
 
 	discovered, err := Discover(cloneResult.Dir, filter)
+	if err != nil && src.SubPath != "" {
+		// Sparse checkout may produce broken symlinks; retry with full shallow clone.
+		cloneResult.Cleanup()
+		cloneResult, err = Clone(ctx, src, CloneOptions{RefOverride: ref, DisableSparse: true})
+		if err != nil {
+			return nil, err
+		}
+		discovered, err = Discover(cloneResult.Dir, filter)
+	}
 	if err != nil {
 		cloneResult.Cleanup()
 		return nil, err
