@@ -119,25 +119,20 @@ Project: github.com/redhat-et/skillimage
 
 ## Your Agent Is Only as Good as Its <span class="accent">Skills</span>
 
-Skills are the unit of specialization. Each skill lives in its own subdirectory and gives the agent domain expertise.
+Skills are the unit of specialization. Each skill gives the agent domain expertise.
 
 - **SKILL.md** — instructions in Agent Skills spec format
-- **skill.yaml** — metadata: tools, resources, versioning
+- **skill.yaml** — metadata: versioning, compatibility, licensing
 
 ```
 skills/
 ├── resume-screener/
 │   ├── SKILL.md
 │   └── skill.yaml
-├── policy-comparator/
-│   ├── SKILL.md
-│   └── skill.yaml
-└── checklist-auditor/
+└── policy-comparator/
     ├── SKILL.md
     └── skill.yaml
 ```
-
-<span class="muted small">Agent Skills Specification — agentskills.io</span>
 
 <!--
 Agent Skills Specification: agentskills.io/specification
@@ -194,9 +189,7 @@ healthcare, government).
 
 ## OCI Is Not Just for <span class="accent">Container Images</span>
 
-The OCI Distribution Specification is **content-agnostic**. Any blob + a manifest + a media type = a valid OCI artifact.
-
-The **ORAS** project (OCI Registry As Storage) makes this practical: push any content to any OCI registry with standard tooling.
+The OCI Distribution Spec is **content-agnostic**. Any blob + manifest + media type = a valid artifact. **ORAS** makes this practical.
 
 <span class="tag">Helm Charts</span> <span class="tag">WASM Modules</span> <span class="tag">ML Models</span> <span class="tag">Policy Bundles</span> <span class="tag-accent">Agent Skills</span>
 
@@ -210,8 +203,6 @@ The **ORAS** project (OCI Registry As Storage) makes this practical: push any co
 │   Images     │  │   Charts     │  │   Skills ★   │
 └──────────────┘  └──────────────┘  └──────────────┘
 ```
-
-<span class="muted small">ORAS — oras.land · OCI Distribution Spec</span>
 
 <!--
 ORAS (OCI Registry As Storage): oras.land
@@ -291,22 +282,17 @@ for later upgrade tracking.
 
 ```
 $ skillctl inspect quay.io/myorg/resume-screener:1.0.0
-
-Name:       myorg/resume-screener
-Version:    1.0.0
-Status:     published
-Description: Screen resumes against a job description...
-Authors:    Red Hat OCTO
-License:    Apache-2.0
-Compat:     claude-3.5-sonnet
-Tags:       ["hr","screening"]
+Name:     myorg/resume-screener    Version: 1.0.0
+Status:   published                License: Apache-2.0
+Authors:  Red Hat OCTO             Compat:  claude-3.5-sonnet
+Tags:     ["hr","screening"]
 ```
 
 **What SkillCard enables:**
-- 🔍 **Discovery** — search by name, namespace, tags, author
-- 🔄 **Lifecycle** — draft → testing → published → deprecated
-- 🔗 **Compatibility** — target model compatibility hints
-- ✅ **Governance** — license, author, namespace for org-level trust policies
+- **Discovery** — search by name, namespace, tags, author
+- **Lifecycle** — draft → testing → published → deprecated
+- **Compatibility** — target model compatibility hints
+- **Governance** — license, author, namespace for trust policies
 
 <!--
 SkillCard schema: skillimage.io/v1alpha1 kind: SkillCard. The metadata travels inside the
@@ -320,25 +306,24 @@ test results, usage metrics) can be added without breaking existing skills.
 
 ## Image Volumes: Mount Skills <span class="accent">Directly</span>
 
-On OpenShift 4.20+ / Kubernetes 1.33+, the kubelet can mount an OCI image as a **read-only volume** — no init container needed.
-
-- Kubelet pulls and caches skill images
-- Read-only mount — immutable at runtime
-- No emptyDir, no node storage consumed
+On OpenShift 4.20+ / K8s 1.33+, mount an OCI image as a **read-only volume** — no init container needed.
 
 ```yaml
 volumes:
-  - name: skill-resume-screener
+  - name: resume-screener
     image:
       reference: quay.io/myorg/resume-screener:1.0.0
       pullPolicy: IfNotPresent
-
 containers:
   - name: agent
     volumeMounts:
-      - name: skill-resume-screener
+      - name: resume-screener
         mountPath: /skills/resume-screener
 ```
+
+- Kubelet pulls and caches skill images automatically
+- Read-only mount — immutable at runtime
+- Same pull policies, pull secrets, and mirrors as container images
 
 <span class="muted small">KEP-4639 · Kubernetes 1.33+ · OpenShift 4.20+</span>
 
@@ -357,24 +342,23 @@ This is the exact same mechanism used for container images, so existing image pu
 
 ## Init Container for <span class="accent">Older Clusters</span>
 
-For Kubernetes < 1.33 or OpenShift < 4.20, use skillctl as an init container to pull skills before the agent starts.
-
-- Pull at pod startup, verify signatures
-- Cache on a PVC across restarts
-- Share the volume with the main container
+For K8s < 1.33 / OpenShift < 4.20, use skillctl as an init container.
 
 ```yaml
 initContainers:
   - name: skill-puller
     image: ghcr.io/redhat-et/skillctl:latest
-    command:
-      - "skillctl"
-      - "pull"
-      - "--verify"
-      - "-o"
-      - "/skills"
-      - "quay.io/myorg/resume-screener:1.0.0"
+    command: ["skillctl", "pull", "--verify",
+              "-o", "/skills",
+              "quay.io/myorg/resume-screener:1.0.0"]
+    volumeMounts:
+      - name: skills
+        mountPath: /skills
 ```
+
+- Pull and verify signatures at pod startup
+- Cache on a PVC across restarts
+- Share the volume with the agent container
 
 <!--
 For older clusters, the init container approach uses skillctl to pull skills from the
@@ -409,23 +393,19 @@ pull policies — we're just reusing existing infrastructure.
 
 ## Disconnected and <span class="accent">Air-Gapped</span> Environments
 
-Many enterprise OpenShift clusters operate in restricted networks with no external registry access. Skills must reach these environments reliably.
-
-**oc-mirror** can mirror skill images alongside operator bundles to an internal registry — if the skill uses a recognizable MIME type.
+**oc-mirror** mirrors skill images alongside operator bundles to internal registries.
 
 ```text
-Connected                              Disconnected
-┌──────────┐   oc-mirror   ┌──────────────────────────┐
-│ Quay.io  │ ───────────── │ Internal OCP Registry    │
-│          │   (mirrored)  │ image-registry.svc:5000  │
-└──────────┘               └──────────────────────────┘
-  Skills +                   Skills + Operators +
-  Operators                  Signatures preserved
+Connected                           Disconnected
+┌──────────┐   oc-mirror   ┌────────────────────────┐
+│ Quay.io  │ ────────────▸ │ Internal OCP Registry  │
+└──────────┘               └────────────────────────┘
+  Skills + Operators         Mirrored with signatures
 ```
 
-- **OLM integration** — skills as related images in operator bundles, mirrored automatically
-- **Internal registry** — pull from the cluster's built-in image registry, no external access needed
-- **Signature preservation** — cosign signatures survive the mirror, verified at admission
+- **OLM integration** — skills as related images, mirrored automatically
+- **Internal registry** — same `skillctl pull` workflow, no external access
+- **Signatures preserved** — cosign signatures survive the mirror
 
 <!--
 The OpenShift platform team is also building support for this. The oc-mirror tool needs a
@@ -446,58 +426,45 @@ automatically includes the skill images.
 
 ## Multiple <span class="accent">Consumption</span> Paths
 
-Not every consumer can mount OCI images. skillctl supports multiple ways to get skills where they need to go.
+Skills are standard OCI images — any tool that pulls images can consume them.
 
 | Method | Command | Best for |
 | ------ | ------- | -------- |
 | **skillctl install** | `skillctl install <ref> --target claude` | Developer workstations |
-| **Image volume** | Pod spec `volumes.image` | OpenShift 4.20+ / K8s 1.33+ |
+| **Image volume** | Pod spec `volumes.image` | K8s 1.33+ / OCP 4.20+ |
 | **Init container** | `skillctl pull -o /skills` | Older clusters |
 | **Container extract** | `podman create` + `podman cp` | No skillctl installed |
 
 ```bash
-# Install directly to Claude Code (auto-pulls from registry):
+# One-command install (auto-pulls from registry):
 $ skillctl install quay.io/myorg/resume-screener:1.0.0 --target claude
-
-# No skillctl? Use podman to extract skill files directly:
-$ podman create --name tmp quay.io/myorg/resume-screener:1.0.0
-$ podman cp tmp:/resume-screener ./skills/
-$ podman rm tmp
 ```
 
 <!--
-skillctl install is the simplest path for developers: one command to pull from the
-registry and install to the agent's skill directory. Supports Claude Code, Cursor,
-Windsurf, OpenCode, and OpenClaw.
-
-Since skills are standard OCI images, any container runtime can pull and extract
-the content — no skillctl needed.
+skillctl install is the simplest path for developers. Supports Claude Code, Cursor,
+Windsurf, OpenCode, and OpenClaw. Since skills are standard OCI images, any container
+runtime can also pull and extract the content.
 -->
 
 ---
 
 ## Brew-Style <span class="accent">Skill Management</span>
 
-Like `dnf` for AI skills: install, list, check for updates, upgrade — one command each.
+Like `dnf` for AI skills — install, list, upgrade in one command each.
 
 ```bash
-# Install from registry (auto-pulls)
 $ skillctl install quay.io/myorg/code-reviewer:1.0.0 --target claude
+Installed to ~/.claude/skills/code-reviewer
 
-# See what's installed
-$ skillctl list --installed --target claude
-NAME             VERSION  SOURCE                              TARGET
-code-reviewer    1.0.0    quay.io/myorg/code-reviewer:1.0.0   claude
-meeting-notes    1.2.0    quay.io/myorg/meeting-notes:1.2.0   claude
+$ skillctl list --installed --upgradable --target claude
+NAME            VERSION  LATEST  SOURCE                             TARGET
+code-reviewer   1.0.0    2.0.0   quay.io/myorg/code-reviewer:2.0.0  claude
 
-# Check for updates
-$ skillctl list --installed --upgradable
-NAME             VERSION  LATEST  SOURCE                              TARGET
-code-reviewer    1.0.0    2.0.0   quay.io/myorg/code-reviewer:2.0.0   claude
-
-# Upgrade
 $ skillctl upgrade code-reviewer --target claude
 Upgraded code-reviewer 1.0.0 → 2.0.0 (claude)
+
+$ skillctl upgrade --all --target claude
+All skills are up to date.
 ```
 
 <!--
