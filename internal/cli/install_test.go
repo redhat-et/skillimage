@@ -39,7 +39,7 @@ func TestNewSkillCardFromRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.ref, func(t *testing.T) {
-			sc := newSkillCardFromRef(tt.ref)
+			sc := NewSkillCardFromRef(tt.ref)
 			if sc.Metadata.Name != tt.wantName {
 				t.Errorf("name = %q, want %q", sc.Metadata.Name, tt.wantName)
 			}
