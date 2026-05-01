@@ -69,7 +69,7 @@ func Validate(col *SkillCollection) []string {
 		case s.Image == "" && s.Source == "":
 			errs = append(errs, fmt.Sprintf("skills[%d]: image or source is required", i))
 		case s.Image != "" && s.Name == "":
-			errs = append(errs, fmt.Sprintf("skills[%d].name is required", i))
+			errs = append(errs, fmt.Sprintf("skills[%d].name is required for image entries", i))
 		}
 		if s.Name != "" && seen[s.Name] {
 			errs = append(errs, fmt.Sprintf("duplicate skill name %q", s.Name))
