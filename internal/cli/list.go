@@ -18,6 +18,7 @@ func newListCmd() *cobra.Command {
 	var target string
 	var outputDir string
 	var upgradable bool
+	var noTrunc bool
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -43,7 +44,7 @@ Supported targets for --installed:
 			if showInstalled {
 				return runListInstalled(cmd, target, outputDir, upgradable)
 			}
-			return runList(cmd)
+			return runList(cmd, noTrunc)
 		},
 	}
 
@@ -51,11 +52,12 @@ Supported targets for --installed:
 	cmd.Flags().StringVarP(&target, "target", "t", "", "filter to a specific agent target")
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "scan a custom directory")
 	cmd.Flags().BoolVarP(&upgradable, "upgradable", "u", false, "show only upgradable skills (requires --installed)")
+	cmd.Flags().BoolVar(&noTrunc, "no-trunc", false, "show full digest and raw timestamps")
 
 	return cmd
 }
 
-func runList(cmd *cobra.Command) error {
+func runList(cmd *cobra.Command, noTrunc bool) error {
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -74,12 +76,10 @@ func runList(cmd *cobra.Command) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "NAME\tTAG\tSTATUS\tDIGEST\tCREATED")
 	for _, img := range images {
-		shortDigest := img.Digest
-		if len(shortDigest) > 19 {
-			shortDigest = shortDigest[:19]
-		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			img.Name, img.Tag, img.Status, shortDigest, img.Created)
+			img.Name, img.Tag, img.Status,
+			formatDigest(img.Digest, noTrunc),
+			formatCreated(img.Created, noTrunc))
 	}
 	return w.Flush()
 }
