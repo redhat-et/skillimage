@@ -378,26 +378,23 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 }
 
 func installFromImage(ctx context.Context, client *oci.Client, s collection.SkillRef, destDir string, force bool, w io.Writer) (string, error) {
-	if !force {
-		installedDigest := readInstalledCommit(destDir, s.Name)
-		if installedDigest != "" {
-			localDigest, err := client.ResolveDigest(ctx, s.Image)
-			if err == nil && localDigest == installedDigest {
-				fmt.Fprintf(w, "  %s (image)  up to date\n", s.Name)
+	if !looksLocal(s.Image) {
+		fmt.Fprintf(w, "  %s (image)  pulling...", s.Name)
+		desc, err := client.Pull(ctx, s.Image, oci.PullOptions{})
+		if err != nil {
+			fmt.Fprintln(w)
+			return "", fmt.Errorf("pulling %s: %w", s.Image, err)
+		}
+
+		if !force {
+			installedDigest := readInstalledCommit(destDir, s.Name)
+			if installedDigest == desc.Digest.String() {
+				fmt.Fprintf(w, "  up to date\n")
 				return "skipped", nil
 			}
 		}
-	}
-
-	fmt.Fprintf(w, "  %s (image)  pulling...", s.Name)
-
-	if !looksLocal(s.Image) {
-		if _, err := client.ResolveDigest(ctx, s.Image); err != nil {
-			if _, pullErr := client.Pull(ctx, s.Image, oci.PullOptions{}); pullErr != nil {
-				fmt.Fprintln(w)
-				return "", fmt.Errorf("pulling %s: %w", s.Image, pullErr)
-			}
-		}
+	} else {
+		fmt.Fprintf(w, "  %s (image)  installing...", s.Name)
 	}
 
 	if err := client.Unpack(ctx, s.Image, destDir); err != nil {
@@ -407,7 +404,7 @@ func installFromImage(ctx context.Context, client *oci.Client, s collection.Skil
 
 	skillDir := filepath.Join(destDir, oci.SkillNameFromRef(s.Image))
 	if err := WriteProvenance(ctx, client, s.Image, skillDir); err != nil {
-		fmt.Fprintf(os.Stderr, "  warning: provenance write failed: %v\n", err)
+		fmt.Fprintf(w, "  warning: provenance write failed: %v\n", err)
 	}
 
 	fmt.Fprintf(w, "  installed\n")
