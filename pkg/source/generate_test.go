@@ -71,6 +71,22 @@ func TestGenerateSkillCardFallbacks(t *testing.T) {
 	}
 }
 
+func TestGenerateSkillCardColonSeparatedName(t *testing.T) {
+	dir := t.TempDir()
+	writeSkillMD(t, dir, "---\nname: agnosticv:catalog-builder\ndescription: Builds catalogs.\n---\nContent.")
+
+	sc, err := source.GenerateSkillCard(dir, "https://github.com/rhpds/rhdp-skills.git", "rhpds")
+	if err != nil {
+		t.Fatalf("GenerateSkillCard: %v", err)
+	}
+	if sc.Metadata.Name != "catalog-builder" {
+		t.Errorf("Name = %q, want catalog-builder", sc.Metadata.Name)
+	}
+	if sc.Metadata.Namespace != "agnosticv" {
+		t.Errorf("Namespace = %q, want agnosticv (from colon prefix)", sc.Metadata.Namespace)
+	}
+}
+
 func TestGenerateSkillCardMalformedFrontmatter(t *testing.T) {
 	dir := t.TempDir()
 	writeSkillMD(t, dir, "---\nbad: [yaml: {{\n---\nContent here.")

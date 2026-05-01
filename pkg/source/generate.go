@@ -19,12 +19,18 @@ func GenerateSkillCard(skillDir, cloneURL, orgFallback string) (*skillcard.Skill
 	fm := parseFrontmatterRaw(data)
 	body := stripFrontmatterStr(string(data))
 
+	name, namespace := stringFromMap(fm, "name", filepath.Base(skillDir)), orgFallback
+	if before, after, ok := strings.Cut(name, ":"); ok && before != "" && after != "" {
+		namespace = before
+		name = after
+	}
+
 	sc := &skillcard.SkillCard{
 		APIVersion: "skillimage.io/v1alpha1",
 		Kind:       "SkillCard",
 		Metadata: skillcard.Metadata{
-			Name:          stringFromMap(fm, "name", filepath.Base(skillDir)),
-			Namespace:     orgFallback,
+			Name:          name,
+			Namespace:     namespace,
 			Version:       normalizeVersion(stringFromMapNested(fm, "metadata", "version", "0.1.0")),
 			Description:   stringFromMap(fm, "description", firstSentence(body)),
 			License:       stringFromMap(fm, "license", ""),

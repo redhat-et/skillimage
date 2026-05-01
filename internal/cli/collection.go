@@ -378,7 +378,7 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 		return "", fmt.Errorf("unpacking: %w", err)
 	}
 
-	skillDir := filepath.Join(destDir, skill.Name)
+	skillDir := filepath.Join(destDir, skill.SkillCard.Metadata.Name)
 	writeSourceProvenance(skillDir, skill.SkillCard)
 
 	fmt.Fprintf(w, "  installed\n")
