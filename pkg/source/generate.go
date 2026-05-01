@@ -24,6 +24,9 @@ func GenerateSkillCard(skillDir, cloneURL, orgFallback string) (*skillcard.Skill
 		namespace = before
 		name = after
 	}
+	if ns := stringFromMapNested(fm, "metadata", "namespace", ""); ns != "" {
+		namespace = ns
+	}
 
 	sc := &skillcard.SkillCard{
 		APIVersion: "skillimage.io/v1alpha1",

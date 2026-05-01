@@ -87,6 +87,38 @@ func TestGenerateSkillCardColonSeparatedName(t *testing.T) {
 	}
 }
 
+func TestGenerateSkillCardFrontmatterNamespace(t *testing.T) {
+	dir := t.TempDir()
+	writeSkillMD(t, dir, "---\nname: resume-reviewer\ndescription: Reviews resumes.\nmetadata:\n  namespace: business/hr\n---\nContent.")
+
+	sc, err := source.GenerateSkillCard(dir, "https://github.com/acme/skills.git", "acme")
+	if err != nil {
+		t.Fatalf("GenerateSkillCard: %v", err)
+	}
+	if sc.Metadata.Name != "resume-reviewer" {
+		t.Errorf("Name = %q, want resume-reviewer", sc.Metadata.Name)
+	}
+	if sc.Metadata.Namespace != "business/hr" {
+		t.Errorf("Namespace = %q, want business/hr", sc.Metadata.Namespace)
+	}
+}
+
+func TestGenerateSkillCardNamespaceOverridesColon(t *testing.T) {
+	dir := t.TempDir()
+	writeSkillMD(t, dir, "---\nname: old-group:my-skill\nmetadata:\n  namespace: correct-ns\n---\nContent.")
+
+	sc, err := source.GenerateSkillCard(dir, "https://github.com/org/repo.git", "org")
+	if err != nil {
+		t.Fatalf("GenerateSkillCard: %v", err)
+	}
+	if sc.Metadata.Name != "my-skill" {
+		t.Errorf("Name = %q, want my-skill", sc.Metadata.Name)
+	}
+	if sc.Metadata.Namespace != "correct-ns" {
+		t.Errorf("Namespace = %q, want correct-ns (explicit overrides colon)", sc.Metadata.Namespace)
+	}
+}
+
 func TestGenerateSkillCardMalformedFrontmatter(t *testing.T) {
 	dir := t.TempDir()
 	writeSkillMD(t, dir, "---\nbad: [yaml: {{\n---\nContent here.")
