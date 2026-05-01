@@ -2,8 +2,11 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 	"text/tabwriter"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-et/skillimage/pkg/installed"
@@ -15,6 +18,7 @@ func newListCmd() *cobra.Command {
 	var target string
 	var outputDir string
 	var upgradable bool
+	var noTrunc bool
 
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -40,7 +44,7 @@ Supported targets for --installed:
 			if showInstalled {
 				return runListInstalled(cmd, target, outputDir, upgradable)
 			}
-			return runList(cmd)
+			return runList(cmd, noTrunc)
 		},
 	}
 
@@ -48,11 +52,12 @@ Supported targets for --installed:
 	cmd.Flags().StringVarP(&target, "target", "t", "", "filter to a specific agent target")
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "scan a custom directory")
 	cmd.Flags().BoolVarP(&upgradable, "upgradable", "u", false, "show only upgradable skills (requires --installed)")
+	cmd.Flags().BoolVar(&noTrunc, "no-trunc", false, "show full digest and raw timestamps")
 
 	return cmd
 }
 
-func runList(cmd *cobra.Command) error {
+func runList(cmd *cobra.Command, noTrunc bool) error {
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -71,12 +76,10 @@ func runList(cmd *cobra.Command) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "NAME\tTAG\tSTATUS\tDIGEST\tCREATED")
 	for _, img := range images {
-		shortDigest := img.Digest
-		if len(shortDigest) > 19 {
-			shortDigest = shortDigest[:19]
-		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			img.Name, img.Tag, img.Status, shortDigest, img.Created)
+			img.Name, img.Tag, img.Status,
+			formatDigest(img.Digest, noTrunc),
+			formatCreated(img.Created, noTrunc))
 	}
 	return w.Flush()
 }
@@ -139,4 +142,34 @@ func runListInstalled(cmd *cobra.Command, target, outputDir string, upgradable b
 
 func resolveListTargets(target, outputDir string) (map[string]string, error) {
 	return resolveTargetDirs(target, outputDir, true)
+}
+
+func formatDigest(digest string, noTrunc bool) string {
+	if digest == "" {
+		return ""
+	}
+	if noTrunc {
+		return digest
+	}
+	if idx := strings.IndexByte(digest, ':'); idx >= 0 {
+		digest = digest[idx+1:]
+	}
+	if len(digest) > 12 {
+		digest = digest[:12]
+	}
+	return digest
+}
+
+func formatCreated(created string, noTrunc bool) string {
+	if created == "" {
+		return ""
+	}
+	if noTrunc {
+		return created
+	}
+	t, err := time.Parse(time.RFC3339, created)
+	if err != nil {
+		return created
+	}
+	return humanize.Time(t)
 }
