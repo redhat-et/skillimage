@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/redhat-et/skillimage/pkg/collection"
+	"github.com/redhat-et/skillimage/pkg/lifecycle"
 	"github.com/redhat-et/skillimage/pkg/oci"
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 	"github.com/redhat-et/skillimage/pkg/source"
@@ -370,7 +371,8 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 		return "", fmt.Errorf("building: %w", err)
 	}
 
-	buildRef := fmt.Sprintf("%s/%s:%s", skill.SkillCard.Metadata.Namespace, skill.SkillCard.Metadata.Name, skill.SkillCard.Metadata.Version)
+	tag := lifecycle.TagForState(skill.SkillCard.Metadata.Version, lifecycle.Draft)
+	buildRef := fmt.Sprintf("%s/%s:%s", skill.SkillCard.Metadata.Namespace, skill.SkillCard.Metadata.Name, tag)
 	if err := client.Unpack(ctx, buildRef, destDir); err != nil {
 		fmt.Fprintln(w)
 		return "", fmt.Errorf("unpacking: %w", err)
