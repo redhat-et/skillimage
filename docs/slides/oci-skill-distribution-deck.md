@@ -44,6 +44,7 @@ style: |
   strong { color: #ffffff; }
   em { color: #c7c7c7; }
   .accent { color: #ee0000; }
+  .accent strong { color: inherit; }
   .tag {
     display: inline-block;
     padding: 2px 14px;
@@ -117,44 +118,27 @@ Project: github.com/redhat-et/skillimage
 
 ---
 
-## Your Agent Is Only as Good as Its <span class="accent">Skills</span>
+## What is a skill?
 
-Skills are the unit of specialization. Each skill gives the agent domain expertise.
-
-- **SKILL.md** — instructions in Agent Skills spec format
-- **skill.yaml** — metadata: versioning, compatibility, licensing
-
-```
-skills/
-├── resume-screener/
-│   ├── SKILL.md
-│   └── skill.yaml
-└── policy-comparator/
-    ├── SKILL.md
-    └── skill.yaml
-```
-
-<!--
-Agent Skills Specification: agentskills.io/specification
-
-Skills are the unit of specialization for an agent. Each skill is a self-contained
-directory with instructions (SKILL.md) and optional metadata (skill.yaml). The agent
-discovers and loads them at startup.
-
-Think of skills like plugins: the agent provides the runtime, skills provide domain expertise.
--->
+- A text (Markdown) file with instructions for the LLM
+  - That includes a frontmatter explaining when and how to use it
+  - The format is defined by https://agentskills.io/ specification
+- An optional set of additional files, e.g.:
+  - Resource/reference files: web page style instructions
+  - Scripts or other executable files
+- Introduced by Anthropic in October 2025
+  - Used by other agents widely
 
 ---
 
-## Today's Skill Distribution Is <span class="accent">Ad-Hoc</span>
+## Today's skill distribution is <span class="accent">ad-hoc</span>
 
-| Method | How it works | Drawback |
-| ------ | ------------ | -------- |
-| **Copy from a Friend** | Slack messages, email, shared drives | No versioning. No provenance. No audit trail. |
-| **Clone from GitHub** | git clone the repo, copy the directory | No signing. No atomic versioning. Auth is coarse-grained. |
-| **Mount a ConfigMap** | Embed skill text in a K8s ConfigMap | 1 MiB limit. No versioning. Mixes config with content. |
+| Method                 | How it works                           | Drawback                                                  |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------- |
+| **Copy from a Friend** | Slack messages, email, shared drives   | No versioning. No provenance. No audit trail.             |
+| **Clone from GitHub**  | git clone the repo, copy the directory | No signing. No atomic versioning. Auth is coarse-grained. |
 
-These get you started, but none provide the **versioning, signing, and auditability** that enterprise deployments require.
+These get you started, but none provide the **versioning, provenance, signing, and auditability** that enterprise deployments require.
 
 <!--
 Each of these methods gets progressively closer to enterprise readiness —
@@ -167,7 +151,19 @@ examples or data files won't fit.
 
 ---
 
-## Enterprise Deployments Need <span class="accent">Trust Infrastructure</span>
+## Toxic Skills are real
+
+Out of 3,984 skills from ClawHub and skills.sh (as of Feb 5th, 2026):
+
+- <span class="accent">**36.8%**</span> (1,467 skills) have at least one security flaw
+- <span class="accent">**13.4%**</span> (534 skills) have at least one critical-level security issue
+
+Data by Snyk (Feb 5th, 2026)
+https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/
+
+---
+
+## Enterprise deployments need <span class="accent">trust infrastructure</span>
 
 - 🔒 **Signing** — Cryptographic proof of who published a skill and that it hasn't been tampered with
 - 📋 **Auditability** — Registry logs show who pulled what, when, and where it was deployed
@@ -187,13 +183,13 @@ healthcare, government).
 
 ---
 
-## OCI Is Not Just for <span class="accent">Container Images</span>
+## We have solved this problem already
 
 The OCI Distribution Spec is **content-agnostic**. Any blob + manifest + media type = a valid artifact. **ORAS** makes this practical.
 
 <span class="tag">Helm Charts</span> <span class="tag">WASM Modules</span> <span class="tag">ML Models</span> <span class="tag">Policy Bundles</span> <span class="tag-accent">Agent Skills</span>
 
-```
+```text
 ┌────────────────────────────────────────────────────┐
 │      OCI Registry (Quay / GHCR / Harbor / Zot)     │
 └────────────────────────────────────────────────────┘
@@ -218,18 +214,51 @@ No infrastructure changes needed.
 
 ---
 
-## A Skill Becomes an <span class="accent">OCI Artifact</span>
+## Your agent is only as good as its <span class="accent">skills</span>
+
+Skills are the unit of specialization. Each skill gives the agent domain expertise.
+
+- **SKILL.md** — instructions in Agent Skills spec format
+- **skill.yaml** — metadata: versioning, compatibility, licensing
+- **Scripts** — executable files (Python, Bash, etc.)
+- **Anything else** — supporting files, models, tools
+
+```
+skills/
+├── resume-screener/
+│   ├── SKILL.md
+│   └── skill.yaml
+└── policy-comparator/
+    ├── SKILL.md
+    └── skill.yaml
+```
+
+<!--
+Agent Skills Specification: agentskills.io/specification
+
+Skills are the unit of specialization for an agent. Each skill is a self-contained
+directory with instructions (SKILL.md) and optional metadata (skill.yaml). The agent
+discovers and loads them at startup.
+
+Think of skills like plugins: the agent provides the runtime, skills provide domain expertise.
+-->
+
+---
+
+## A skill becomes an <span class="accent">OCI artifact</span>
 
 ```
 Skill Directory  →  skillctl build  →  OCI Image  →  skillctl push  →  Registry
 ```
 
 **What goes into the image:**
+
 - `SKILL.md` — instructions
 - `skill.yaml` — SkillCard metadata
 - Any supporting files in the directory
 
 **What the registry provides:**
+
 - Immutable digest + mutable tags
 - RBAC & pull secrets
 - Cosign / sigstore signatures
@@ -248,23 +277,20 @@ inspection without pulling the full layer.
 
 ---
 
-## The Workflow: <span class="accent">Build, Push, Install</span>
+## How to package skills: <span class="accent">build, tag, push</span>
 
 ```bash
 # Build skill into a local OCI image
 $ skillctl build skills/resume-screener/
 Built resume-screener:1.0.0-draft (sha256:65af...)
 
-# Tag and push to registry
+# Tag with registry tag
 $ skillctl tag resume-screener:1.0.0-draft \
     quay.io/myorg/resume-screener:1.0.0-draft
-$ skillctl push quay.io/myorg/resume-screener:1.0.0-draft
 
-# Install directly from registry to Claude Code
-$ skillctl install quay.io/myorg/resume-screener:1.0.0 \
-    --target claude
-Pulling quay.io/myorg/resume-screener:1.0.0...
-Installed to ~/.claude/skills/resume-screener
+
+# Push to registry
+$ skillctl push quay.io/myorg/resume-screener:1.0.0-draft
 ```
 
 <!--
@@ -278,9 +304,9 @@ for later upgrade tracking.
 
 ---
 
-## Every Skill Has a <span class="accent">Machine-Readable Identity</span>
+## Every skill has a <span class="accent">machine-readable identity</span>
 
-```
+```bash
 $ skillctl inspect quay.io/myorg/resume-screener:1.0.0
 Name:     myorg/resume-screener    Version: 1.0.0
 Status:   published                License: Apache-2.0
@@ -304,7 +330,7 @@ test results, usage metrics) can be added without breaking existing skills.
 
 ---
 
-## Image Volumes: Mount Skills <span class="accent">Directly</span>
+## Deploy as image volumes: mount skills <span class="accent">directly</span>
 
 On OpenShift 4.20+ / K8s 1.33+, mount an OCI image as a **read-only volume**.
 
@@ -340,7 +366,7 @@ This is the exact same mechanism used for container images, so existing image pu
 
 ---
 
-## Init Container for <span class="accent">Older Clusters</span>
+## Init container for <span class="accent">older clusters</span>
 
 For K8s < 1.33 / OpenShift < 4.20, use skillctl as an init container.
 
@@ -371,17 +397,43 @@ verification before extracting the skill.
 
 ---
 
-## From Ad-Hoc to <span class="accent">Supply Chain</span>
+## Install for personal use
 
-| | Before | After (OCI) |
-| --- | ------ | ----------- |
-| **Distribution** | git clone or manual copy | `skillctl install` from registry |
-| **Versioning** | Branch/tag only | Semver tags + immutable digests |
-| **Upgrades** | Manual re-clone | `skillctl upgrade` with version check |
-| **Signing** | None | Cosign / sigstore signing |
-| **Audit** | No trail | Registry access logs |
-| **Auth** | Repo level only | Per-namespace RBAC + pull secrets |
-| **Runtime** | Mutable | Read-only image volume mount |
+```bash
+# Install into a target directory
+skillctl pull -o TARGET_DIR
+
+# Install for a specific agent
+skillctl install --target claude
+```
+
+Supported targets:
+
+- claude    `~/.claude/skills/`
+- cursor    `~/.cursor/skills/`
+- windsurf  `~/.codeium/windsurf/skills/`
+- opencode  `~/.config/opencode/skills/`
+- openclaw  `~/.openclaw/skills/`
+
+<!--
+skillctl install is the easiest way to get started. It pulls the skill image from the
+registry and extracts it into the target directory. The --target flag lets you specify
+the agent you're installing for, so the skill is extracted to the correct location.
+-->
+
+---
+
+## From ad-hoc to <span class="accent">supply chain</span>
+
+|                  | Before                   | After (OCI)                           |
+| ---------------- | ------------------------ | ------------------------------------- |
+| **Distribution** | git clone or manual copy | `skillctl install` from registry      |
+| **Versioning**   | Branch/tag only          | Semver tags + immutable digests       |
+| **Upgrades**     | Manual re-clone          | `skillctl upgrade` with version check |
+| **Signing**      | None                     | Cosign / sigstore signing             |
+| **Audit**        | No trail                 | Registry access logs                  |
+| **Auth**         | Repo level only          | Per-namespace RBAC + pull secrets     |
+| **Runtime**      | Mutable                  | Read-only image volume mount          |
 
 <!--
 The before/after contrast highlights what OCI distribution adds to the picture. All the
@@ -391,7 +443,7 @@ pull policies — we're just reusing existing infrastructure.
 
 ---
 
-## Disconnected and <span class="accent">Air-Gapped</span> Environments
+## Disconnected and <span class="accent">air-gapped</span> environments
 
 **oc-mirror** mirrors skill images alongside operator bundles to internal registries.
 
@@ -424,16 +476,16 @@ automatically includes the skill images.
 
 ---
 
-## Multiple <span class="accent">Consumption</span> Paths
+## Multiple <span class="accent">consumption</span> paths
 
 Skills are standard OCI images — any tool that pulls images can consume them.
 
-| Method | Command | Best for |
-| ------ | ------- | -------- |
-| **skillctl install** | `skillctl install <ref> --target claude` | Developer workstations |
-| **Image volume** | Pod spec `volumes.image` | K8s 1.33+ / OCP 4.20+ |
-| **Init container** | `skillctl pull -o /skills` | Older clusters |
-| **Container extract** | `podman create` + `podman cp` | No skillctl installed |
+| Method                | Command                                  | Best for               |
+| --------------------- | ---------------------------------------- | ---------------------- |
+| **skillctl install**  | `skillctl install <ref> --target claude` | Developer workstations |
+| **Image volume**      | Pod spec `volumes.image`                 | K8s 1.33+ / OCP 4.20+  |
+| **Init container**    | `skillctl pull -o /skills`               | Older clusters         |
+| **Container extract** | `podman create` + `podman cp`            | No skillctl installed  |
 
 ```bash
 # One-command install (auto-pulls from registry):
@@ -448,7 +500,7 @@ runtime can also pull and extract the content.
 
 ---
 
-## Brew-Style <span class="accent">Skill Management</span>
+## Brew-style <span class="accent">skill management</span>
 
 Like `dnf` for AI skills — install, list, upgrade in one command each.
 
@@ -477,7 +529,7 @@ and uses strict semver comparison. Local skills without provenance are skipped.
 
 ---
 
-## Try It <span class="accent">Today</span>
+## Try it <span class="accent">today</span>
 
 - 💻 **Install:** `brew install pavelanni/tap/skillctl` — build, push, install, upgrade in minutes
 - 🔄 **Full lifecycle:** build → promote → push → install → upgrade → remove
@@ -499,7 +551,7 @@ Resources:
 
 <!-- _class: thankyou -->
 
-# Thank <span class="accent">You</span>
+# Thank <span class="accent">you</span>
 
 Pavel Anni · Office of CTO · Red Hat
 
