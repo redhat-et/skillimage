@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -81,40 +82,58 @@ func newAuthClient(store credentials.Store, skipTLSVerify bool) *auth.Client {
 }
 
 // credentialStore returns a credential store that checks Docker config first,
-// then falls back to Podman's auth.json.
+// then falls back to Podman auth files found via podmanAuthPaths.
 func credentialStore() (credentials.Store, error) {
 	dockerStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	podmanPath := podmanAuthPath()
-	if podmanPath == "" {
-		return dockerStore, nil
+	var fallbacks []credentials.Store
+	for _, p := range podmanAuthPaths() {
+		if _, err := os.Stat(p); err != nil {
+			slog.Debug("podman auth file not found", "path", p)
+			continue
+		}
+		store, err := credentials.NewStore(p, credentials.StoreOptions{})
+		if err != nil {
+			slog.Debug("skipping unreadable podman auth file", "path", p, "error", err)
+			continue
+		}
+		fallbacks = append(fallbacks, store)
 	}
 
-	if _, err := os.Stat(podmanPath); err != nil {
+	if len(fallbacks) == 0 {
 		return dockerStore, nil
 	}
-
-	podmanStore, err := credentials.NewStore(podmanPath, credentials.StoreOptions{})
-	if err != nil {
-		// Podman config unreadable but Docker config works — fall back gracefully.
-		return dockerStore, nil
-	}
-
-	return credentials.NewStoreWithFallbacks(dockerStore, podmanStore), nil
+	return credentials.NewStoreWithFallbacks(dockerStore, fallbacks...), nil
 }
 
-func podmanAuthPath() string {
+// podmanAuthPaths returns Podman/containers auth file locations in search
+// order per the containers-auth.json(5) spec:
+//  1. $XDG_RUNTIME_DIR/containers/auth.json  (Linux primary)
+//  2. $XDG_CONFIG_HOME/containers/auth.json   (fallback; defaults to ~/.config)
+func podmanAuthPaths() []string {
+	var paths []string
+
 	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
-		return filepath.Join(xdg, "containers", "auth.json")
+		paths = append(paths, filepath.Join(xdg, "containers", "auth.json"))
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			configHome = filepath.Join(home, ".config")
+		}
 	}
-	return filepath.Join(home, ".config", "containers", "auth.json")
+	if configHome != "" {
+		p := filepath.Join(configHome, "containers", "auth.json")
+		if len(paths) == 0 || paths[0] != p {
+			paths = append(paths, p)
+		}
+	}
+
+	return paths
 }
 
 // splitRefTag splits an OCI reference into repository and tag/digest.
