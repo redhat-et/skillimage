@@ -37,24 +37,14 @@ func TestPodmanAuthPaths(t *testing.T) {
 		}
 	})
 
-	t.Run("deduplicates when XDG_CONFIG_HOME equals default", func(t *testing.T) {
-		t.Setenv("XDG_RUNTIME_DIR", "")
-
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Skip("cannot determine home dir")
-		}
-		t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Run("deduplicates when XDG_RUNTIME_DIR and XDG_CONFIG_HOME match", func(t *testing.T) {
+		t.Setenv("XDG_RUNTIME_DIR", "/tmp/shared-config")
+		t.Setenv("XDG_CONFIG_HOME", "/tmp/shared-config")
 
 		paths := podmanAuthPaths()
 
-		// Should not contain the same path twice.
-		seen := make(map[string]bool)
-		for _, p := range paths {
-			if seen[p] {
-				t.Errorf("duplicate path: %s", p)
-			}
-			seen[p] = true
+		if len(paths) != 1 {
+			t.Fatalf("expected 1 path, got %d: %v", len(paths), paths)
 		}
 	})
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -91,10 +92,12 @@ func credentialStore() (credentials.Store, error) {
 	var fallbacks []credentials.Store
 	for _, p := range podmanAuthPaths() {
 		if _, err := os.Stat(p); err != nil {
+			slog.Debug("podman auth file not found", "path", p)
 			continue
 		}
 		store, err := credentials.NewStore(p, credentials.StoreOptions{})
 		if err != nil {
+			slog.Debug("skipping unreadable podman auth file", "path", p, "error", err)
 			continue
 		}
 		fallbacks = append(fallbacks, store)
