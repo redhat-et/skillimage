@@ -73,6 +73,10 @@ A skill is a directory with a `skill.yaml` (SkillCard metadata)
 and a `SKILL.md` (prompt content). See `examples/hello-world/`
 for a working example.
 
+For a plugin-backed workflow example, see `examples/tweetclaw-openclaw/`.
+It packages a TweetClaw OpenClaw workflow with source provenance and explicit
+approval boundaries for X/Twitter actions.
+
 ```yaml
 apiVersion: skillimage.io/v1alpha1
 kind: SkillCard

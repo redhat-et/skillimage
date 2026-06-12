@@ -1,0 +1,32 @@
+apiVersion: skillimage.io/v1alpha1
+kind: SkillCard
+metadata:
+  name: tweetclaw-openclaw
+  namespace: examples
+  version: 1.0.0
+  display-name: "TweetClaw OpenClaw Workflow"
+  description: >
+    Packages an approval-gated OpenClaw plugin workflow for TweetClaw and Xquik
+    X/Twitter data, media, monitoring, giveaway, and reviewed posting tasks.
+  license: Apache-2.0
+  tags:
+    - openclaw
+    - x-twitter
+    - social
+    - plugin
+    - approval
+  compatibility: openclaw
+  authors:
+    - name: SkillImage contributors
+provenance:
+  source: https://github.com/Xquik-dev/tweetclaw
+  commit: 4f30d17a46c778c9f02c27bc70b40714ac2dc091
+  path: skills/tweetclaw
+spec:
+  prompt: SKILL.md
+  examples:
+    - input: "Search recent replies before preparing a support response."
+      output: >
+        Use explore to confirm the TweetClaw search reply operation, collect the
+        requested reply context, summarize findings, and ask before any
+        write-like follow-up.
