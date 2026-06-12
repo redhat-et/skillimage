@@ -4,7 +4,7 @@ description: Package an approval-gated OpenClaw plugin workflow for TweetClaw an
 license: Apache-2.0
 metadata:
   author: skillimage-contributors
-  version: "1.0"
+  version: "1.0.0"
 ---
 
 Use this skill when an OpenClaw agent needs X/Twitter data or reviewed
