@@ -16,8 +16,12 @@ registry can't be silently changed underneath an agent.
 4. If you mount it the way OpenShift/Kubernetes ImageVolumes always do
    (read-only), the same write attempt is rejected by the kernel, in
    front of the audience, with a real error message.
-5. No matter what happens to a local copy, the artifact in the registry
-   never changes — the digest recorded at build time still matches.
+5. No matter what happens to a local copy, the *digest* of the artifact
+   in the registry never changes. (A registry can still let someone
+   move the `:1.0.0-draft` tag to point at a different digest later —
+   that's a separate guarantee, provided by pinning deployments to a
+   digest or by a registry's tag-immutability policy, not by anything
+   in this demo.)
 6. A real, minimal agent runtime ([DocsClaw](https://github.com/redhat-et/docsclaw))
    picks up the skill with zero code changes, proving this isn't just a
    filesystem trick — it's how agents actually consume skills in production.
@@ -84,10 +88,16 @@ match the script's output headers.
 
 **5. The published artifact itself never changed**
 > "And critically — even in step 3, when a local copy got corrupted, the
-> actual artifact sitting in the registry was never touched. The digest
-> is identical to the one we recorded when we built it. Compliance and
-> audit only care about this guarantee, and it holds regardless of what
-> happens to any one running container."
+> artifact sitting in the registry was never touched. We just asked the
+> registry directly, not our local cache. The digest is identical to the
+> one we recorded when we built it, and it holds regardless of what
+> happens to any one running container. Two callouts for the compliance
+> folks: this checks the digest, not the tag — someone could still
+> repoint `:1.0.0-draft` at different content later, which is why real
+> deployments pin by digest or rely on a registry's tag-immutability
+> policy. And step 4's read-only guarantee is a property of the local
+> mount, not the registry — it's what stops an agent from corrupting
+> its own copy, which is a distinct protection from digest immutability."
 
 **6. A real agent harness discovers the skill**
 > "This isn't a synthetic demo — this is DocsClaw, an actual open-source

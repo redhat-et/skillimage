@@ -175,7 +175,9 @@ echo
 if [[ ${WRITE_EXIT} -ne 0 ]]; then
   ok "Write was rejected by the kernel (read-only file system)."
 else
-  fail "Write unexpectedly succeeded — investigate before demoing this."
+  fail "Write unexpectedly succeeded — the read-only mount did not"
+  fail "protect the skill. Aborting: do not demo this as-is."
+  exit 1
 fi
 note "The content is exactly what was published:"
 run podman run --rm -v "${VOLUME_NAME}:/skills:ro" "${BUSYBOX_IMAGE}" cat /skills/SKILL.md
@@ -189,15 +191,23 @@ heading "5. The published artifact itself never changed"
 note "Whatever happened to a local volume, the image in the registry (and"
 note "skillctl's own record of it) is untouched. This is the guarantee"
 note "that matters for compliance: the *artifact* is immutable, not just"
-note "the mount point."
-CURRENT_DIGEST="$(podman image inspect "${REGISTRY_REF}" --format '{{.Digest}}')"
-echo "Digest at build time: ${ORIGINAL_DIGEST}"
-echo "Digest right now:     ${CURRENT_DIGEST}"
+note "the mount point. We re-query the registry directly (not our local"
+note "cache) to prove it."
+CURRENT_DIGEST="$(skopeo inspect --tls-verify=false --format '{{.Digest}}' \
+  "docker://${REGISTRY_REF}")"
+echo "Digest at build time:        ${ORIGINAL_DIGEST}"
+echo "Digest in registry right now: ${CURRENT_DIGEST}"
 if [[ "${ORIGINAL_DIGEST}" == "${CURRENT_DIGEST}" ]]; then
-  ok "Digests match — the image was never modified, only local copies were."
+  ok "Digests match — the artifact in the registry was never modified."
 else
   fail "Digests differ — something is wrong with this environment."
+  exit 1
 fi
+note "Note: this checks the digest, not tag immutability. Registries can"
+note "still let someone overwrite the ':1.0.0-draft' tag to point at a"
+note "different digest later — pin deployments by digest (@sha256:...) or"
+note "enforce a tag-immutability policy in the registry if that matters"
+note "for your compliance posture."
 pause
 
 # ---------------------------------------------------------------------------
