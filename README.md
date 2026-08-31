@@ -280,6 +280,23 @@ OpenCode discovers the skill automatically. Running `/skills`
 in the TUI shows the document-summarizer, and the agent uses it
 when asked to summarize a document or web page.
 
+#### Demo: proving immutability
+
+Want to *see* the read-only guarantee instead of taking it on
+faith? [`demo/immutable-volume/`](demo/immutable-volume/) has a
+self-contained, narrated script that builds a skill, mounts it
+both as a writable volume (and shows it can be tampered with) and
+as a read-only image volume (and shows the write gets rejected by
+the kernel), then proves the published artifact's digest never
+changed. It also runs a real agent runtime
+([DocsClaw](https://github.com/redhat-et/docsclaw)) against the
+mounted skill. No LLM API key required — good for a live demo to
+non-engineers.
+
+```bash
+./demo/immutable-volume/run.sh
+```
+
 ### Running skillctl on OpenShift
 
 You can run skillctl directly on an OpenShift cluster to inspect
