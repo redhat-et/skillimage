@@ -14,8 +14,8 @@ func newRmCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rm <ref> [<ref>...]",
 		Aliases: []string{"delete"},
-		Short:   "Remove skill images from local store",
-		Long: `Remove one or more skill images from the local store by
+		Short:   "Remove OCI images from local store",
+		Long: `Remove one or more OCI images from the local store by
 tag reference (e.g., test/hello-world:1.0.0-draft).
 
 Does not clean up unreferenced blobs — run 'skillctl prune'

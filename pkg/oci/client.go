@@ -1,6 +1,7 @@
 package oci
 
 import (
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content/oci"
 
 	"github.com/redhat-et/skillimage/pkg/skillcard"
@@ -37,6 +38,27 @@ type BuildOptions struct {
 	SkillCard *skillcard.SkillCard
 }
 
+// PluginBuildOptions configures the BuildPlugin operation.
+type PluginBuildOptions struct {
+	// ImageRef, if set, overrides the repository name from plugin.json. If it
+	// is untagged, is not a digest reference, and Tag is empty, the manifest
+	// version is used as the tag.
+	ImageRef string
+	// Tag overrides the manifest version or the tag in ImageRef. It cannot be
+	// used with a digest reference.
+	Tag string
+	// MediaType selects the media type profile. Agent Plugin images currently
+	// support only standard OCI media types; empty defaults to standard.
+	MediaType MediaTypeProfile
+}
+
+// PluginBuildResult contains the resolved image reference and manifest
+// descriptor produced by BuildPlugin.
+type PluginBuildResult struct {
+	ImageRef   string
+	Descriptor ocispec.Descriptor
+}
+
 // PushOptions configures the Push operation.
 type PushOptions struct {
 	// SkipTLSVerify disables TLS certificate verification for the
@@ -56,12 +78,14 @@ type PullOptions struct {
 
 // LocalImage holds metadata for an image stored in the local OCI layout.
 type LocalImage struct {
-	Name    string
-	Version string
-	Tag     string
-	Digest  string
-	Status  string
-	Created string
+	Name         string
+	Version      string
+	Tag          string
+	Digest       string
+	Status       string
+	Created      string
+	Type         string
+	ArtifactType string
 }
 
 // PromoteOptions configures the Promote operation.
@@ -78,23 +102,25 @@ type InspectOptions struct {
 	SkipTLSVerify bool
 }
 
-// InspectResult holds detailed metadata for a skill image.
+// InspectResult holds detailed metadata for a skill or Agent Plugin image.
 type InspectResult struct {
-	Name          string
-	DisplayName   string
-	Version       string
-	Status        string
-	Description   string
-	Authors       string
-	License       string
-	Tags          string
-	Compatibility string
-	WordCount     string
-	Digest        string
-	Created       string
-	MediaType      string
+	Name            string
+	DisplayName     string
+	Version         string
+	Status          string
+	Description     string
+	Authors         string
+	License         string
+	Tags            string
+	Compatibility   string
+	WordCount       string
+	Digest          string
+	Created         string
+	MediaType       string
 	ConfigMediaType string
 	LayerMediaType  string
-	Size           int64
-	LayerCount     int
+	ArtifactType    string
+	Size            int64
+	LayerCount      int
+	Plugin          *PluginInspectResult
 }

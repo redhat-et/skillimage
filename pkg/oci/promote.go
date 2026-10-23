@@ -15,8 +15,8 @@ import (
 	"github.com/redhat-et/skillimage/pkg/lifecycle"
 )
 
-// promotableStore is the minimal interface required for promoting a skill
-// image. Both oci.Store and remote.Repository satisfy this interface.
+// promotableStore is the minimal interface required for promoting an image.
+// Both oci.Store and remote.Repository satisfy this interface.
 type promotableStore interface {
 	Resolve(ctx context.Context, ref string) (ocispec.Descriptor, error)
 	Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error)
@@ -24,7 +24,7 @@ type promotableStore interface {
 	Tag(ctx context.Context, desc ocispec.Descriptor, ref string) error
 }
 
-// PromoteLocal promotes a skill image within the local store by
+// PromoteLocal promotes an image within the local store by
 // transitioning it from its current lifecycle state to the target state.
 // Image layers remain unchanged; only the manifest annotation and tags
 // are updated.
@@ -32,7 +32,7 @@ func (c *Client) PromoteLocal(ctx context.Context, ref string, to lifecycle.Stat
 	return promote(ctx, c.store, ref, to)
 }
 
-// Promote promotes a skill on a remote registry by transitioning it
+// Promote promotes an image on a remote registry by transitioning it
 // from its current lifecycle state to the target state.
 func (c *Client) Promote(ctx context.Context, ref string, to lifecycle.State, opts PromoteOptions) error {
 	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
@@ -56,7 +56,7 @@ func promote(ctx context.Context, store promotableStore, ref string, to lifecycl
 		return fmt.Errorf("fetching manifest for %s: %w", ref, err)
 	}
 	defer func() { _ = rc.Close() }()
-	manifestBytes, err := io.ReadAll(rc)
+	manifestBytes, err := readManifestBytes(rc)
 	if err != nil {
 		return fmt.Errorf("reading manifest for %s: %w", ref, err)
 	}
@@ -71,8 +71,15 @@ func promote(ctx context.Context, store promotableStore, ref string, to lifecycl
 	if manifest.Annotations == nil {
 		return fmt.Errorf("manifest has no annotations")
 	}
+	if manifest.ArtifactType != "" {
+		return fmt.Errorf("lifecycle promotion does not support artifact type %q", manifest.ArtifactType)
+	}
 
 	currentStatus := manifest.Annotations[lifecycle.StatusAnnotation]
+	if currentStatus == "" && manifest.Annotations[AnnotationPluginType] == PluginType {
+		// Plugin images created before lifecycle status was added are drafts.
+		currentStatus = string(lifecycle.Draft)
+	}
 	from, err := lifecycle.ParseState(currentStatus)
 	if err != nil {
 		return fmt.Errorf("parsing current state %q: %w", currentStatus, err)
@@ -81,6 +88,11 @@ func promote(ctx context.Context, store promotableStore, ref string, to lifecycl
 	if !lifecycle.ValidTransition(from, to) {
 		return fmt.Errorf("invalid transition: %s -> %s", from, to)
 	}
+	version := manifest.Annotations[ocispec.AnnotationVersion]
+	if version == "" {
+		return fmt.Errorf("manifest missing %s annotation; cannot compute tag", ocispec.AnnotationVersion)
+	}
+	newTag := lifecycle.TagForState(version, to)
 
 	// 5. Update the status annotation.
 	manifest.Annotations[lifecycle.StatusAnnotation] = string(to)
@@ -105,11 +117,6 @@ func promote(ctx context.Context, store promotableStore, ref string, to lifecycl
 
 	// 8. Compute the new tag and tag the manifest.
 	namespaceName := parseNameFromTag(ref)
-	version := manifest.Annotations[ocispec.AnnotationVersion]
-	if version == "" {
-		return fmt.Errorf("manifest missing %s annotation; cannot compute tag", ocispec.AnnotationVersion)
-	}
-	newTag := lifecycle.TagForState(version, to)
 
 	if newTag != "" {
 		tagRef := fmt.Sprintf("%s:%s", namespaceName, newTag)

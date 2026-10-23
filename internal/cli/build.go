@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"github.com/redhat-et/skillimage/pkg/oci"
 	"github.com/redhat-et/skillimage/pkg/source"
@@ -15,24 +17,40 @@ func newBuildCmd() *cobra.Command {
 	var ref string
 	var filter string
 	cmd := &cobra.Command{
-		Use:   "build <dir-or-url>",
-		Short: "Build a skill directory or Git repo into local OCI images",
-		Args:  cobra.ExactArgs(1),
+		Use:   "build <dir-or-url> [plugin-image-ref]",
+		Short: "Build a skill or Agent Plugin directory or Git repo into a local OCI image",
+		Long:  "Build a skill or Agent Plugin package into a local OCI image. The package type is detected from the input. For plugin packages, an optional full OCI reference can be supplied as the second argument.",
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if source.IsRemote(args[0]) {
-				return runBuildRemote(cmd, args[0], tag, mediaType, ref, filter)
+			imageRef := ""
+			if len(args) == 2 {
+				imageRef = args[1]
 			}
-			return runBuild(cmd, args[0], tag, mediaType)
+			if source.IsRemote(args[0]) {
+				return runBuildRemote(cmd, args[0], imageRef, tag, mediaType, ref, filter)
+			}
+			return runBuild(cmd, args[0], imageRef, tag, mediaType)
 		},
 	}
-	cmd.Flags().StringVar(&tag, "tag", "", "override the image tag (default: <version>-draft)")
-	cmd.Flags().StringVar(&mediaType, "media-type", "", `media type profile: "standard" (default) or "redhat" (for oc-mirror)`)
+	cmd.Flags().StringVar(&tag, "tag", "", "override the image tag (default: skill version-draft or plugin version)")
+	cmd.Flags().StringVar(&mediaType, "media-type", "", "media type profile: \"standard\" (default) or \"redhat\" (for oc-mirror)")
 	cmd.Flags().StringVar(&ref, "ref", "", "Git ref to checkout (branch, tag, or commit SHA)")
 	cmd.Flags().StringVar(&filter, "filter", "", "glob pattern to filter skills by name")
 	return cmd
 }
 
-func runBuild(cmd *cobra.Command, dir, tag, mediaType string) error {
+func runBuild(cmd *cobra.Command, dir, imageRef, tag, mediaType string) error {
+	isPlugin, err := hasPluginManifest(dir)
+	if err != nil {
+		return err
+	}
+	if isPlugin {
+		return runBuildPlugin(cmd, dir, imageRef, tag, mediaType)
+	}
+	if imageRef != "" {
+		return fmt.Errorf("the positional OCI reference is only supported when building an Agent Plugin package")
+	}
+
 	profile, err := oci.ParseMediaTypeProfile(mediaType)
 	if err != nil {
 		return err
@@ -55,7 +73,40 @@ func runBuild(cmd *cobra.Command, dir, tag, mediaType string) error {
 	return nil
 }
 
-func runBuildRemote(cmd *cobra.Command, rawURL, tag, mediaType, ref, filter string) error {
+func runBuildPlugin(cmd *cobra.Command, dir, imageRef, tag, mediaType string) error {
+	profile, err := oci.ParseMediaTypeProfile(mediaType)
+	if err != nil {
+		return err
+	}
+
+	client, err := defaultClient()
+	if err != nil {
+		return err
+	}
+	result, err := client.BuildPlugin(cmd.Context(), dir, oci.PluginBuildOptions{
+		ImageRef:  imageRef,
+		Tag:       tag,
+		MediaType: profile,
+	})
+	if err != nil {
+		return fmt.Errorf("building Agent Plugin: %w", err)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Built plugin %s\nDigest: %s\n", result.ImageRef, result.Descriptor.Digest)
+	return nil
+}
+
+func hasPluginManifest(dir string) (bool, error) {
+	_, err := os.Lstat(filepath.Join(dir, "plugin.json"))
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, fmt.Errorf("checking for plugin.json: %w", err)
+}
+
+func runBuildRemote(cmd *cobra.Command, rawURL, imageRef, tag, mediaType, ref, filter string) error {
 	profile, err := oci.ParseMediaTypeProfile(mediaType)
 	if err != nil {
 		return err
@@ -75,6 +126,16 @@ func runBuildRemote(cmd *cobra.Command, rawURL, tag, mediaType, ref, filter stri
 		return err
 	}
 	defer result.Cleanup()
+
+	if result.PluginDir != "" {
+		if filter != "" {
+			return fmt.Errorf("--filter applies only to repositories containing skills")
+		}
+		return runBuildPlugin(cmd, result.PluginDir, imageRef, tag, mediaType)
+	}
+	if imageRef != "" {
+		return fmt.Errorf("the positional OCI reference is only supported when building an Agent Plugin package")
+	}
 
 	if tag != "" && len(result.Skills) > 1 {
 		return fmt.Errorf("--tag cannot be used when building multiple skills")

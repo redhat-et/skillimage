@@ -6,10 +6,10 @@ import (
 
 func NewRootCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "skillctl",
-		Short:   "Manage AI agent skills as OCI images",
-		Long:    "skillctl builds, pushes, pulls, and manages the lifecycle of AI agent skills stored as OCI images.",
-		Version: version,
+		Use:           "skillctl",
+		Short:         "Package AI agent skills and plugins as OCI images",
+		Long:          "skillctl builds, pushes, pulls, and manages AI agent skills and Agent Plugins stored as OCI images.",
+		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

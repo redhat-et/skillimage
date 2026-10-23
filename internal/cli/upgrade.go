@@ -151,6 +151,9 @@ func upgradeSkill(ctx context.Context, client *oci.Client, c installed.UpgradeCa
 	if err != nil {
 		return fmt.Errorf("pulling %s: %w", c.LatestRef, err)
 	}
+	if err := requireSkillImage(ctx, client, c.LatestRef, "skillctl upgrade"); err != nil {
+		return err
+	}
 
 	parentDir := filepath.Dir(c.Installed.Path)
 	if err := client.Unpack(ctx, c.LatestRef, parentDir); err != nil {

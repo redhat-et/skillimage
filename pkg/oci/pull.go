@@ -18,69 +18,79 @@ import (
 // Pull copies an image from a remote registry into the local store.
 // If opts.OutputDir is set, the image is also unpacked into that directory.
 func (c *Client) Pull(ctx context.Context, ref string, opts PullOptions) (ocispec.Descriptor, error) {
+	desc, _, err := c.PullWithUnpack(ctx, ref, opts)
+	return desc, err
+}
+
+// PullWithUnpack pulls an image into the local store and returns the directory
+// created when OutputDir is set. The image type determines its unpacking rules.
+func (c *Client) PullWithUnpack(ctx context.Context, ref string, opts PullOptions) (ocispec.Descriptor, string, error) {
 	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("creating remote repository: %w", err)
+		return ocispec.Descriptor{}, "", fmt.Errorf("creating remote repository: %w", err)
 	}
 
 	_, tag := splitRefTag(ref)
 	desc, err := oras.Copy(ctx, repo, tag, c.store, ref, oras.DefaultCopyOptions)
 	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("pulling %s: %w", ref, err)
+		return ocispec.Descriptor{}, "", fmt.Errorf("pulling %s: %w", ref, err)
 	}
 
+	var unpackedPath string
 	if opts.OutputDir != "" {
-		if err := c.Unpack(ctx, ref, opts.OutputDir); err != nil {
-			return desc, fmt.Errorf("unpacking after pull: %w", err)
+		unpackedPath, err = c.UnpackPackage(ctx, ref, opts.OutputDir)
+		if err != nil {
+			return desc, "", fmt.Errorf("unpacking after pull: %w", err)
 		}
 	}
-
-	return desc, nil
+	return desc, unpackedPath, nil
 }
 
-// Unpack extracts skill files from a stored image into a directory.
-// It creates a subdirectory named after the skill (the last path segment
-// of the ref before the :tag) and extracts all layers into it.
+// Unpack extracts a locally stored skill or Agent Plugin package.
 func (c *Client) Unpack(ctx context.Context, ref string, outputDir string) error {
-	// 1. Resolve the ref in the store.
+	_, err := c.UnpackPackage(ctx, ref, outputDir)
+	return err
+}
+
+// UnpackPackage extracts a package using the rules for its detected OCI type
+// and returns the created package directory.
+func (c *Client) UnpackPackage(ctx context.Context, ref, outputDir string) (string, error) {
 	desc, err := c.store.Resolve(ctx, ref)
 	if err != nil {
-		return fmt.Errorf("resolving %s: %w", ref, err)
+		return "", fmt.Errorf("resolving %s: %w", ref, err)
 	}
 
-	// 2. Fetch and parse the manifest.
 	rc, err := c.store.Fetch(ctx, desc)
 	if err != nil {
-		return fmt.Errorf("fetching manifest: %w", err)
+		return "", fmt.Errorf("fetching manifest: %w", err)
 	}
 	defer func() { _ = rc.Close() }()
-	manifestBytes, err := io.ReadAll(rc)
+	manifestBytes, err := readManifestBytes(rc)
 	if err != nil {
-		return fmt.Errorf("reading manifest: %w", err)
+		return "", fmt.Errorf("reading manifest: %w", err)
 	}
 
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return fmt.Errorf("parsing manifest: %w", err)
+		return "", fmt.Errorf("parsing manifest: %w", err)
+	}
+	if manifest.Annotations[AnnotationPluginType] == PluginType {
+		return c.UnpackPlugin(ctx, ref, outputDir)
 	}
 
-	// 3. Extract skill name from the ref (last segment before :tag).
 	skillName := SkillNameFromRef(ref)
-
-	// 4. Create outputDir/skillName/ directory.
 	targetDir := filepath.Join(outputDir, skillName)
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return fmt.Errorf("creating output directory: %w", err)
+		return "", fmt.Errorf("creating output directory: %w", err)
 	}
 
-	// 5. For each layer, fetch, decompress gzip, extract tar entries.
 	for _, layer := range manifest.Layers {
 		if err := extractLayer(ctx, c, layer, targetDir); err != nil {
-			return fmt.Errorf("extracting layer %s: %w", layer.Digest, err)
+			return "", fmt.Errorf("extracting layer %s: %w", layer.Digest, err)
 		}
 	}
 
-	return nil
+	return targetDir, nil
 }
 
 // SkillNameFromRef extracts the skill name from a reference like

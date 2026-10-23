@@ -32,6 +32,9 @@ func (c *Client) Prune(ctx context.Context) (*PruneResult, error) {
 	type groupKey struct{ name, version string }
 	groups := make(map[groupKey][]LocalImage)
 	for _, img := range images {
+		if img.Type == PluginType || img.ArtifactType != "" {
+			continue
+		}
 		k := groupKey{img.Name, img.Version}
 		groups[k] = append(groups[k], img)
 	}

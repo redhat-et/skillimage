@@ -121,8 +121,9 @@ skillctl collection pull -o ~/.claude/skills \
   quay.io/myorg/collections/hr-skills:1.0.0
 ```
 
-This fetches the collection artifact, parses the YAML, and
-pulls each skill image, extracting it into
+This fetches the collection artifact and parses the YAML. Without `-o`,
+member manifests are inspected without downloading their image layers. With
+`-o`, each skill image is pulled and extracted into
 `<output-dir>/<skill-name>/`.
 
 ### collection volume

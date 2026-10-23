@@ -47,6 +47,10 @@ func newCollectionPushCmd() *cobra.Command {
 }
 
 func runCollectionPush(cmd *cobra.Command, ref, file string, skipTLSVerify bool) error {
+	if _, err := parseCollectionFile(file); err != nil {
+		return fmt.Errorf("building collection artifact: %w", err)
+	}
+
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -71,7 +75,7 @@ func newCollectionPullCmd() *cobra.Command {
 	var tlsVerify bool
 	cmd := &cobra.Command{
 		Use:   "pull <ref>",
-		Short: "Pull a collection and all its skills from a registry",
+		Short: "Fetch a collection and optionally pull its skills from a registry",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCollectionPull(cmd, args[0], outputDir, !tlsVerify)
@@ -105,7 +109,7 @@ func runCollectionPull(cmd *cobra.Command, ref, outputDir string, skipTLSVerify 
 
 func resolveCollection(file string, args []string) (*collection.SkillCollection, error) {
 	if file != "" {
-		return collection.ParseFile(file)
+		return parseCollectionFile(file)
 	}
 	if len(args) == 0 {
 		return nil, fmt.Errorf("specify -f <file> or a registry reference")
@@ -277,7 +281,7 @@ func resolveCollectionInput(ctx context.Context, file string, args []string, ref
 		return nil, nil, fmt.Errorf("specify -f <file> or a Git URL, not both")
 	}
 	if file != "" {
-		col, err := collection.ParseFile(file)
+		col, err := parseCollectionFile(file)
 		return col, nil, err
 	}
 	if len(args) == 0 {
@@ -306,17 +310,39 @@ func resolveCollectionInput(ctx context.Context, file string, args []string, ref
 		return nil, nil, fmt.Errorf("collection file not found at %s in repository", src.SubPath)
 	}
 	if info.IsDir() {
+		isPlugin, checkErr := hasPluginManifest(yamlPath)
+		if checkErr != nil {
+			cloneResult.Cleanup()
+			return nil, nil, checkErr
+		}
+		if isPlugin {
+			cloneResult.Cleanup()
+			return nil, nil, fmt.Errorf("URL points to an Agent Plugin repository, not a collection YAML file: %s", src.SubPath)
+		}
 		cloneResult.Cleanup()
 		return nil, nil, fmt.Errorf("URL must point to a collection YAML file, not a directory: %s", src.SubPath)
 	}
 
-	col, err := collection.ParseFile(yamlPath)
+	col, err := parseCollectionFile(yamlPath)
 	if err != nil {
 		cloneResult.Cleanup()
 		return nil, nil, err
 	}
 
 	return col, cloneResult.Cleanup, nil
+}
+
+func parseCollectionFile(path string) (*collection.SkillCollection, error) {
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		isPlugin, err := hasPluginManifest(path)
+		if err != nil {
+			return nil, err
+		}
+		if isPlugin {
+			return nil, fmt.Errorf("%s is an Agent Plugin directory, not a collection YAML file", path)
+		}
+	}
+	return collection.ParseFile(path)
 }
 
 func installFromSource(ctx context.Context, client *oci.Client, s collection.SkillRef, destDir string, force bool, w io.Writer) (string, error) {
@@ -356,6 +382,10 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 		return "", err
 	}
 	defer result.Cleanup()
+	if result.PluginDir != "" {
+		fmt.Fprintln(w)
+		return "", fmt.Errorf("collection source %s is an Agent Plugin; source entries must resolve to a standalone skill", s.Source)
+	}
 
 	if len(result.Skills) == 0 {
 		fmt.Fprintln(w)
@@ -386,6 +416,7 @@ func installFromSource(ctx context.Context, client *oci.Client, s collection.Ski
 }
 
 func installFromImage(ctx context.Context, client *oci.Client, s collection.SkillRef, destDir string, force bool, w io.Writer) (string, error) {
+	var pulledDigest string
 	if !looksLocal(s.Image) {
 		fmt.Fprintf(w, "  %s (image)  pulling...", s.Name)
 		desc, err := client.Pull(ctx, s.Image, oci.PullOptions{})
@@ -393,16 +424,20 @@ func installFromImage(ctx context.Context, client *oci.Client, s collection.Skil
 			fmt.Fprintln(w)
 			return "", fmt.Errorf("pulling %s: %w", s.Image, err)
 		}
-
-		if !force {
-			installedDigest := readInstalledCommit(destDir, s.Name)
-			if installedDigest == desc.Digest.String() {
-				fmt.Fprintf(w, "  up to date\n")
-				return "skipped", nil
-			}
-		}
+		pulledDigest = desc.Digest.String()
 	} else {
 		fmt.Fprintf(w, "  %s (image)  installing...", s.Name)
+	}
+	if err := requireSkillImage(ctx, client, s.Image, "skillctl collection install"); err != nil {
+		fmt.Fprintln(w)
+		return "", err
+	}
+	if pulledDigest != "" && !force {
+		installedDigest := readInstalledCommit(destDir, s.Name)
+		if installedDigest == pulledDigest {
+			fmt.Fprintf(w, "  up to date\n")
+			return "skipped", nil
+		}
 	}
 
 	if err := client.Unpack(ctx, s.Image, destDir); err != nil {

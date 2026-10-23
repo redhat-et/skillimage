@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "incident-triage",
+  "version": "1.0.0",
+  "description": "A sample plugin for structuring incident triage and response updates.",
+  "author": {
+    "name": "skillctl examples"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "example",
+    "incident-response",
+    "triage"
+  ],
+  "extensions": {
+    "com.example.skillctl": {
+      "purpose": "Exercise plugin extension metadata packaging."
+    }
+  }
+}

@@ -17,12 +17,12 @@ type inspectableStore interface {
 	Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error)
 }
 
-// Inspect retrieves detailed metadata for a skill image in the local store.
+// Inspect retrieves detailed metadata for a skill or Agent Plugin image in the local store.
 func (c *Client) Inspect(ctx context.Context, ref string) (*InspectResult, error) {
 	return inspect(ctx, c.store, ref)
 }
 
-// InspectRemote retrieves detailed metadata for a skill image on a remote registry.
+// InspectRemote retrieves detailed metadata for a skill or Agent Plugin image on a remote registry.
 func (c *Client) InspectRemote(ctx context.Context, ref string, opts InspectOptions) (*InspectResult, error) {
 	repo, err := newRemoteRepository(ref, opts.SkipTLSVerify)
 	if err != nil {
@@ -43,7 +43,7 @@ func inspect(ctx context.Context, store inspectableStore, ref string) (*InspectR
 	}
 	defer func() { _ = rc.Close() }()
 
-	manifestBytes, err := io.ReadAll(rc)
+	manifestBytes, err := readManifestBytes(rc)
 	if err != nil {
 		return nil, fmt.Errorf("reading manifest: %w", err)
 	}
@@ -56,6 +56,30 @@ func inspect(ctx context.Context, store inspectableStore, ref string) (*InspectR
 	ann := manifest.Annotations
 	if ann == nil {
 		ann = make(map[string]string)
+	}
+	if ann[AnnotationPluginType] == PluginType {
+		plugin, err := inspectPluginManifest(manifest, desc)
+		if err != nil {
+			return nil, fmt.Errorf("inspecting Agent Plugin: %w", err)
+		}
+		return &InspectResult{
+			Name:            plugin.Name,
+			DisplayName:     plugin.Name,
+			Version:         plugin.Version,
+			Status:          ann[lifecycle.StatusAnnotation],
+			Description:     plugin.Description,
+			Authors:         plugin.Author,
+			License:         plugin.License,
+			Digest:          plugin.Digest,
+			Created:         plugin.Created,
+			MediaType:       plugin.MediaType,
+			ConfigMediaType: manifest.Config.MediaType,
+			LayerMediaType:  plugin.LayerType,
+			ArtifactType:    manifest.ArtifactType,
+			Size:            plugin.Size,
+			LayerCount:      plugin.LayerCount,
+			Plugin:          plugin,
+		}, nil
 	}
 
 	name := parseNameFromTag(ref)
@@ -97,6 +121,7 @@ func inspect(ctx context.Context, store inspectableStore, ref string) (*InspectR
 		MediaType:       desc.MediaType,
 		ConfigMediaType: manifest.Config.MediaType,
 		LayerMediaType:  layerMediaType,
+		ArtifactType:    manifest.ArtifactType,
 		Size:            totalSize,
 		LayerCount:      len(manifest.Layers),
 	}, nil

@@ -16,8 +16,8 @@ func newPromoteCmd() *cobra.Command {
 	var tlsVerify bool
 	cmd := &cobra.Command{
 		Use:   "promote <ref>",
-		Short: "Promote a skill to the next lifecycle state",
-		Long: `Promote a skill image to a new lifecycle state.
+		Short: "Promote a skill or Agent Plugin image to the next lifecycle state",
+		Long: `Promote a skill or Agent Plugin image to a new lifecycle state.
 
 State transitions: draft -> testing -> published -> deprecated -> archived
 
@@ -26,6 +26,7 @@ images in the local store.
 
 Examples:
   skillctl promote quay.io/acme/hr-onboarding:1.0.0-draft --to testing
+  skillctl promote quay.io/acme/my-plugin:1.0.0 --to testing
   skillctl promote test/test-skill:1.0.0-draft --to testing --local`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

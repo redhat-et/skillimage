@@ -12,8 +12,8 @@ func newPushCmd() *cobra.Command {
 	var tlsVerify bool
 	cmd := &cobra.Command{
 		Use:   "push <ref>",
-		Short: "Push a skill image from local store to a remote registry",
-		Long: `Push a skill image to a remote OCI registry.
+		Short: "Push an OCI image from the local store to a remote registry",
+		Long: `Push a skill or Agent Plugin image to a remote OCI registry.
 
 The ref should be a full OCI reference: registry/namespace/name:tag
 Example: quay.io/acme/hr-onboarding:1.0.0-draft`,

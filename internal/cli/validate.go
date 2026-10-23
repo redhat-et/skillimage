@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/redhat-et/skillimage/pkg/agentplugin"
 	"github.com/redhat-et/skillimage/pkg/skillcard"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +13,7 @@ import (
 func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate <dir|file>",
-		Short: "Validate a SkillCard against the JSON Schema",
+		Short: "Validate a SkillCard or Agent Plugin package",
 		Args:  cobra.ExactArgs(1),
 		RunE:  runValidate,
 	}
@@ -20,12 +21,22 @@ func newValidateCmd() *cobra.Command {
 
 func runValidate(cmd *cobra.Command, args []string) error {
 	path := args[0]
+	if filepath.Base(path) == "plugin.json" {
+		return validatePlugin(cmd, filepath.Dir(path))
+	}
 
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("accessing %s: %w", path, err)
 	}
 	if info.IsDir() {
+		isPlugin, err := hasPluginManifest(path)
+		if err != nil {
+			return err
+		}
+		if isPlugin {
+			return validatePlugin(cmd, path)
+		}
 		path = filepath.Join(path, "skill.yaml")
 	}
 
@@ -54,5 +65,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "✓ %s is valid\n", path)
+	return nil
+}
+
+func validatePlugin(cmd *cobra.Command, dir string) error {
+	info, err := agentplugin.ValidateDir(dir)
+	if err != nil {
+		return fmt.Errorf("validating Agent Plugin: %w", err)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "✓ %s is a valid Agent Plugin (%d skills, %d MCP servers, %d extensions)\n",
+		dir, len(info.Skills), len(info.MCPServers), len(info.Extensions))
 	return nil
 }

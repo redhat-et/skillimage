@@ -10,8 +10,8 @@ import (
 func newTagCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "tag <source> <target>",
-		Short: "Create a new reference for a local skill image",
-		Long: `Create an additional tag for an existing local skill image.
+		Short: "Create a new reference for a local OCI image",
+		Long: `Create an additional tag for an existing local OCI image.
 
 Works like "docker tag" or "podman tag": the target reference
 points to the same image as the source. Use this to set a

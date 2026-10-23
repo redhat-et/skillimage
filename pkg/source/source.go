@@ -29,6 +29,7 @@ func OrgFromCloneURL(cloneURL string) string {
 
 type ResolveResult struct {
 	Skills    []ResolvedSkill
+	PluginDir string
 	Cleanup   func()
 	SourceURL string
 }
@@ -52,6 +53,18 @@ func Resolve(ctx context.Context, input string, ref string, filter string) (*Res
 	cloneResult, err := Clone(ctx, src, CloneOptions{RefOverride: ref})
 	if err != nil {
 		return nil, err
+	}
+
+	pluginManifest := filepath.Join(cloneResult.Dir, "plugin.json")
+	if _, statErr := os.Lstat(pluginManifest); statErr == nil {
+		return &ResolveResult{
+			PluginDir: cloneResult.Dir,
+			Cleanup:   cloneResult.Cleanup,
+			SourceURL: input,
+		}, nil
+	} else if !os.IsNotExist(statErr) {
+		cloneResult.Cleanup()
+		return nil, fmt.Errorf("checking plugin manifest: %w", statErr)
 	}
 
 	discovered, err := Discover(cloneResult.Dir, filter)

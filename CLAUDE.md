@@ -2,8 +2,8 @@
 
 ## Overview
 
-A framework-agnostic OCI-based registry for AI agent skills.
-Stores actual skill content as OCI artifacts, manages lifecycle,
+A framework-agnostic OCI-based registry for AI agent skills and plugins.
+Stores skill and Agent Plugin content as OCI images, manages skill lifecycle,
 and enables discovery. Companion to
 [agentoperations/agent-registry](https://github.com/agentoperations/agent-registry)
 (metadata/governance layer).
@@ -28,6 +28,7 @@ make fmt         # Format code
 | `internal/store/` | Storage interface + SQLite |
 | `internal/server/` | Router, middleware |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
+| `pkg/agentplugin/` | Agent Plugins v1 package and component validation |
 | `pkg/oci/` | Build/push/pull/inspect (oras-go) |
 | `pkg/installed/` | Installed skill scanning and upgrade checking |
 | `pkg/verify/` | Sigstore signature verification |

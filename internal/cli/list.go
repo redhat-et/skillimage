@@ -19,16 +19,17 @@ func newListCmd() *cobra.Command {
 	var outputDir string
 	var upgradable bool
 	var noTrunc bool
+	var kind string
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List skill images in local store",
-		Long: `List skill images stored locally, or show installed skills
+		Short:   "List skill and Agent Plugin images in local store",
+		Long: `List skill and Agent Plugin images stored locally, or show installed skills
 across agent directories.
 
-Without --installed, lists images in the local OCI store.
-With --installed, scans agent skill directories for installed skills.
+Without --installed, lists images in the local OCI store. Use --kind to filter
+by type. With --installed, scans agent skill directories for installed skills.
 
 Supported targets for --installed:
   claude    ~/.claude/skills/
@@ -42,9 +43,12 @@ Supported targets for --installed:
 				return fmt.Errorf("--upgradable requires --installed")
 			}
 			if showInstalled {
+				if kind != "" {
+					return fmt.Errorf("--kind applies to local image listing; --installed lists skills")
+				}
 				return runListInstalled(cmd, target, outputDir, upgradable)
 			}
-			return runList(cmd, noTrunc)
+			return runList(cmd, noTrunc, kind)
 		},
 	}
 
@@ -53,11 +57,16 @@ Supported targets for --installed:
 	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "scan a custom directory")
 	cmd.Flags().BoolVarP(&upgradable, "upgradable", "u", false, "show only upgradable skills (requires --installed)")
 	cmd.Flags().BoolVar(&noTrunc, "no-trunc", false, "show full digest and raw timestamps")
+	cmd.Flags().StringVar(&kind, "kind", "", "filter local images by type: skill or plugin")
 
 	return cmd
 }
 
-func runList(cmd *cobra.Command, noTrunc bool) error {
+func runList(cmd *cobra.Command, noTrunc bool, kind string) error {
+	if kind != "" && kind != "skill" && kind != "plugin" {
+		return fmt.Errorf("invalid --kind %q: choose skill or plugin", kind)
+	}
+
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -68,20 +77,46 @@ func runList(cmd *cobra.Command, noTrunc bool) error {
 		return fmt.Errorf("listing images: %w", err)
 	}
 
-	if len(images) == 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "No images found in local store.")
+	var selected []oci.LocalImage
+	for _, img := range images {
+		imageKind := localImageKind(img)
+		if kind == "" || kind == imageKind {
+			selected = append(selected, img)
+		}
+	}
+
+	if len(selected) == 0 {
+		if kind != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), "No %s images found in local store.\n", kind)
+		} else {
+			fmt.Fprintln(cmd.OutOrStdout(), "No images found in local store.")
+		}
 		return nil
 	}
 
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tTAG\tSTATUS\tDIGEST\tCREATED")
-	for _, img := range images {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			img.Name, img.Tag, img.Status,
+	fmt.Fprintln(w, "KIND\tNAME\tVERSION\tTAG\tSTATUS\tDIGEST\tCREATED")
+	for _, img := range selected {
+		imageKind := localImageKind(img)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			imageKind, img.Name, img.Version, img.Tag, img.Status,
 			formatDigest(img.Digest, noTrunc),
 			formatCreated(img.Created, noTrunc))
 	}
 	return w.Flush()
+}
+
+func localImageKind(img oci.LocalImage) string {
+	if img.Type == oci.PluginType {
+		return "plugin"
+	}
+	if img.ArtifactType == oci.CollectionArtifactType {
+		return "collection"
+	}
+	if img.ArtifactType != "" {
+		return "artifact"
+	}
+	return "skill"
 }
 
 func runListInstalled(cmd *cobra.Command, target, outputDir string, upgradable bool) error {

@@ -40,6 +40,13 @@ func Scan(targets map[string]string) ([]InstalledSkill, error) {
 			if !entry.IsDir() {
 				continue
 			}
+			pluginManifest := filepath.Join(dir, entry.Name(), "plugin.json")
+			if _, err := os.Lstat(pluginManifest); err == nil {
+				continue
+			} else if !os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "Warning: cannot inspect %s: %v\n", pluginManifest, err)
+				continue
+			}
 
 			skillPath := filepath.Join(dir, entry.Name(), "skill.yaml")
 			f, err := os.Open(skillPath)

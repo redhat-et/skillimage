@@ -76,10 +76,6 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 		outputDir = filepath.Join(home, relPath)
 	}
 
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return fmt.Errorf("creating directory %s: %w", outputDir, err)
-	}
-
 	client, err := defaultClient()
 	if err != nil {
 		return err
@@ -97,6 +93,13 @@ func runInstall(cmd *cobra.Command, ref string, target string, outputDir string)
 		}
 	}
 
+	if err := requireSkillImage(ctx, client, ref, "skillctl install"); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("creating directory %s: %w", outputDir, err)
+	}
 	if err := client.Unpack(ctx, ref, outputDir); err != nil {
 		return fmt.Errorf("installing %s: %w", ref, err)
 	}

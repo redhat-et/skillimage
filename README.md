@@ -1,7 +1,7 @@
 # OCI Skill Registry
 
-A framework-agnostic, OCI-based registry for AI agent skills.
-Packages skills as standard OCI images, manages their lifecycle
+A framework-agnostic OCI registry for AI agent skills and plugins.
+It packages skills and Agent Plugins as standard OCI images, manages skill lifecycle
 (draft, testing, published, deprecated, archived), and works with
 the container tools enterprises already use: `podman`, `skopeo`,
 `crane`, and Kubernetes ImageVolumes.
@@ -12,8 +12,8 @@ Companion to
 
 ## Why OCI images?
 
-Skills are packaged as standard OCI images (`FROM scratch`), not
-ORAS artifacts. This means:
+Skills and Agent Plugins are packaged as standard OCI images
+(`FROM scratch`), not ORAS artifacts. This means:
 
 - `podman pull` / `skopeo copy` / `crane pull` work out of the box
 - Kubernetes ImageVolumes can mount skills directly into agent pods
@@ -162,6 +162,31 @@ Supported targets: `claude`, `cursor`, `windsurf`, `opencode`,
 After installing, skillctl records provenance (source registry
 and digest) in the skill's `skill.yaml` so upgrades can find
 the original source.
+
+### Package Agent Plugins
+
+The build, inspect, pull, and list commands detect Agent Plugin
+images alongside skill images. A plugin package has a root plugin.json;
+portable skills live in skills/<skill-name>/SKILL.md, and optional MCP
+configuration is in root mcp.json.
+
+    # Build a complete plugin package into a local OCI image
+    skillctl build ./my-plugin quay.io/myorg/my-plugin:1.2.0
+
+    # List local plugin images
+    skillctl list --kind plugin
+
+    # Inspect local or remote plugin metadata and its components
+    skillctl inspect quay.io/myorg/my-plugin:1.2.0
+
+    # Pull the image and unpack the complete plugin directory
+    skillctl pull quay.io/myorg/my-plugin:1.2.0 -o ./plugins/
+
+Plugin builds validate the Agent Plugins 1.0 manifest, MCP
+configuration, and discovered Agent Skills frontmatter. They retain
+dotfiles, package resources, and executable bits, and reject absolute,
+broken, or out-of-root symlinks. Pulling extracts to
+<output>/<plugin-name> and fails if that destination already exists.
 
 ### List and upgrade installed skills
 
@@ -338,6 +363,7 @@ make fmt         # Format code
 | `cmd/skillctl/` | CLI entry point |
 | `internal/cli/` | Cobra commands |
 | `pkg/skillcard/` | SkillCard parse, validate, serialize |
+| `pkg/agentplugin/` | Agent Plugins v1 package and component validation |
 | `pkg/oci/` | OCI image build/push/pull/inspect/promote |
 | `pkg/installed/` | Installed skill discovery and upgrade checking |
 | `pkg/lifecycle/` | State machine, tag rules |

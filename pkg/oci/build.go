@@ -121,6 +121,22 @@ func (c *Client) ListLocal() ([]LocalImage, error) {
 	return images, nil
 }
 
+// ListLocalPlugins returns only Agent Plugin images from the local OCI store.
+func (c *Client) ListLocalPlugins() ([]LocalImage, error) {
+	images, err := c.listLocal(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("listing tags: %w", err)
+	}
+
+	plugins := make([]LocalImage, 0)
+	for _, image := range images {
+		if image.Type == PluginType {
+			plugins = append(plugins, image)
+		}
+	}
+	return plugins, nil
+}
+
 func (c *Client) listLocal(ctx context.Context) ([]LocalImage, error) {
 	var images []LocalImage
 
@@ -153,7 +169,7 @@ func (c *Client) imageFromManifest(ctx context.Context, tag string, desc ocispec
 		return nil, err
 	}
 	defer func() { _ = rc.Close() }()
-	manifestBytes, err := io.ReadAll(rc)
+	manifestBytes, err := readManifestBytes(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -172,12 +188,14 @@ func (c *Client) imageFromManifest(ctx context.Context, tag string, desc ocispec
 	_, tagPart := splitRefTag(tag)
 
 	return &LocalImage{
-		Name:    name,
-		Version: ann[ocispec.AnnotationVersion],
-		Tag:     tagPart,
-		Digest:  desc.Digest.String(),
-		Status:  ann[lifecycle.StatusAnnotation],
-		Created: ann[ocispec.AnnotationCreated],
+		Name:         name,
+		Version:      ann[ocispec.AnnotationVersion],
+		Tag:          tagPart,
+		Digest:       desc.Digest.String(),
+		Status:       ann[lifecycle.StatusAnnotation],
+		Created:      ann[ocispec.AnnotationCreated],
+		Type:         ann[AnnotationPluginType],
+		ArtifactType: manifest.ArtifactType,
 	}, nil
 }
 
